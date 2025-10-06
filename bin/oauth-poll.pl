@@ -12,6 +12,8 @@ use constant {
     CLIENT_ID => 'YOUR_CLIENT_ID_HERE',  # Must match oauth-init.pl
     API_BASE_URL => 'https://customer.bmwgroup.com',
     TOKEN_ENDPOINT => '/gcdm/oauth/token',
+    CARDATA_API_BASE_URL => 'https://api-cardata.bmwgroup.com',
+    VEHICLES_MAPPINGS_ENDPOINT => '/customers/vehicles/mappings',
 };
 
 # Plugin data directory
@@ -80,7 +82,8 @@ while (time() < $deadline && $attempt < $max_attempts) {
 
             # Display token information
             print "=== Token Information ===\n";
-            print "Access Token:  " . substr($token_response->{access_token}, 0, 20) . "...\n";
+            print "Access Token (GCDM - for manual API testing):\n";
+            print "$token_response->{access_token}\n\n";
             print "ID Token:      " . substr($token_response->{id_token}, 0, 20) . "...\n";
             print "Refresh Token: " . substr($token_response->{refresh_token}, 0, 20) . "...\n";
             print "GCID:          $token_response->{gcid}\n" if exists $token_response->{gcid};
@@ -91,6 +94,18 @@ while (time() < $deadline && $attempt < $max_attempts) {
             my $refresh_expires_str = localtime($token_response->{refresh_expires_at});
             print "Expires at:    $expires_at_str\n";
             print "Refresh until: $refresh_expires_str\n\n";
+
+            # Retrieve vehicle mappings
+            print "=== Retrieving Vehicle Mappings ===\n";
+            my $mappings = get_vehicle_mappings($token_response->{access_token});
+            if ($mappings) {
+                print "✓ Vehicle mappings retrieved successfully\n\n";
+                print "Full mapping response:\n";
+                print JSON->new->pretty->encode($mappings);
+                print "\n";
+            } else {
+                print "✗ Failed to retrieve vehicle mappings\n\n";
+            }
 
             # Cleanup temporary files
             unlink($pkce_file);
@@ -188,4 +203,39 @@ sub save_json {
     open(my $fh, '>', $filename) or die "Cannot write to $filename: $!\n";
     print $fh encode_json($data);
     close($fh);
+}
+
+# Get vehicle mappings from BMW CarData API
+sub get_vehicle_mappings {
+    my ($access_token) = @_;
+
+    print "Fetching vehicle mappings from BMW CarData API...\n";
+
+    my $ua = LWP::UserAgent->new(
+        agent => 'LoxBerry-BMW-CarData/0.0.1',
+        timeout => 30,
+    );
+
+    my $url = CARDATA_API_BASE_URL . VEHICLES_MAPPINGS_ENDPOINT;
+
+    my $response = $ua->get($url,
+        'Authorization' => "Bearer $access_token",
+        'x-version' => 'v1',
+        'Accept' => 'application/json',
+    );
+
+    unless ($response->is_success) {
+        warn "HTTP Error: " . $response->status_line . "\n";
+        warn "Response: " . $response->decoded_content . "\n";
+        return undef;
+    }
+
+    my $data = eval { decode_json($response->decoded_content) };
+    if ($@) {
+        warn "JSON decode error: $@\n";
+        warn "Response: " . $response->decoded_content . "\n";
+        return undef;
+    }
+
+    return $data;
 }

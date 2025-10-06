@@ -10,7 +10,7 @@
 </div>
 </TMPL_IF>
 
-<TMPL_IF OAUTH_INIT_SUCCESS>
+<TMPL_IF DEVICE_CODE_SUCCESS>
 <div class="ui-state-highlight ui-corner-all" style="padding: 15px; margin-bottom: 20px;">
     <h3 style="margin-top: 0;"><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span> <TMPL_VAR OAUTH.AUTH_REQUIRED_TITLE></h3>
 
@@ -46,16 +46,16 @@
 
     <details style="margin-top: 15px;">
         <summary style="cursor: pointer; color: #0066cc;"><TMPL_VAR OAUTH.SHOW_TECHNICAL_DETAILS></summary>
-        <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px; overflow: auto;"><TMPL_VAR OAUTH_INIT_OUTPUT></pre>
+        <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px; overflow: auto;"><TMPL_VAR DEVICE_CODE_OUTPUT></pre>
     </details>
 </div>
 </TMPL_IF>
 
-<TMPL_IF OAUTH_INIT_ERROR>
+<TMPL_IF DEVICE_CODE_ERROR>
 <div class="ui-state-error ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
     <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
-    <strong><TMPL_VAR STATUS.OAUTH_ERROR></strong>
-    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR OAUTH_INIT_OUTPUT></pre>
+    <strong><TMPL_VAR STATUS.DEVICE_CODE_ERROR></strong>
+    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR DEVICE_CODE_OUTPUT></pre>
 </div>
 </TMPL_IF>
 
@@ -123,20 +123,26 @@
             <li><TMPL_VAR OAUTH.STEP1></li>
             <li><TMPL_VAR OAUTH.STEP2></li>
             <li><TMPL_VAR OAUTH.STEP3>
-                <form method="post" action="index.cgi">
-                    <input type="hidden" name="action" value="start_oauth">
-                    <button type="submit" class="ui-button ui-widget ui-corner-all">
-                        <TMPL_VAR OAUTH.START_BUTTON>
+                <form method="post" action="index.cgi" style="margin-top: 10px;">
+                    <input type="hidden" name="action" value="request_device_code">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all" <TMPL_UNLESS CONFIG_HAS_CLIENT_ID>disabled</TMPL_UNLESS>>
+                        <TMPL_VAR OAUTH.REQUEST_DEVICE_CODE_BUTTON>
                     </button>
                 </form>
+                <TMPL_UNLESS CONFIG_HAS_CLIENT_ID>
+                <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_CLIENT_ID></p>
+                </TMPL_UNLESS>
             </li>
             <li><TMPL_VAR OAUTH.STEP4>
                 <form method="post" action="index.cgi" style="margin-top: 10px;">
                     <input type="hidden" name="action" value="check_oauth">
-                    <button type="submit" class="ui-button ui-widget ui-corner-all">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all" <TMPL_UNLESS DEVICE_CODE_EXISTS>disabled</TMPL_UNLESS>>
                         <TMPL_VAR OAUTH.POLL_BUTTON>
                     </button>
                 </form>
+                <TMPL_UNLESS DEVICE_CODE_EXISTS>
+                <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_DEVICE_CODE></p>
+                </TMPL_UNLESS>
             </li>
         </ol>
     </div>
@@ -178,6 +184,11 @@
             <p style="margin-top: 15px;"><label for="stream_port"><strong><TMPL_VAR CONFIG.STREAM_PORT>:</strong></label></p>
             <input type="number" id="stream_port" name="stream_port" value="<TMPL_VAR STREAM_PORT>"
                    min="1" max="65535" required>
+
+            <p style="margin-top: 15px;"><label for="stream_username"><strong><TMPL_VAR CONFIG.STREAM_USERNAME>:</strong></label>
+            <br><small><TMPL_VAR CONFIG.STREAM_USERNAME_HELP></small></p>
+            <input type="text" id="stream_username" name="stream_username" value="<TMPL_VAR STREAM_USERNAME>"
+                   style="width: 100%; max-width: 500px;" required>
 
             <p style="margin-top: 15px;"><label for="vins"><strong><TMPL_VAR CONFIG.VINS>:</strong></label>
             <br><small><TMPL_VAR CONFIG.VINS_HELP></small></p>

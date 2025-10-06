@@ -49,8 +49,8 @@ my $page = $cgi->param('page') || 'main';
 
 if ($action eq 'save_config') {
     handle_save_config();
-} elsif ($action eq 'start_oauth') {
-    handle_start_oauth();
+} elsif ($action eq 'request_device_code') {
+    handle_request_device_code();
 } elsif ($action eq 'check_oauth') {
     handle_check_oauth();
 } elsif ($action eq 'start_bridge') {
@@ -65,9 +65,10 @@ if ($action eq 'save_config') {
 my $tokens = load_tokens();
 my $config = load_config();
 my $bridge_status = get_bridge_status();
+my $device_code_data = load_device_code();
 
 # Prepare template variables
-prepare_template_vars($page, $tokens, $config, $bridge_status);
+prepare_template_vars($page, $tokens, $config, $bridge_status, $device_code_data);
 
 # Output
 LoxBerry::Web::lbheader($plugintitle, $helplink, $helptemplate);
@@ -85,6 +86,7 @@ sub handle_save_config {
         client_id => $cgi->param('client_id') || '',
         stream_host => $cgi->param('stream_host') || '',
         stream_port => int($cgi->param('stream_port') || 8883),
+        stream_username => $cgi->param('stream_username') || '',
         vins => [],
         mqtt_topic_prefix => $cgi->param('mqtt_topic_prefix') || 'bmw',
     };
@@ -106,7 +108,7 @@ sub handle_save_config {
     $template->param('SAVE_MESSAGE' => $L{'CONFIG.SAVED'});
 }
 
-sub handle_start_oauth {
+sub handle_request_device_code {
     # Run oauth-init.pl
     my $output = qx{$bin_dir/oauth-init.pl 2>&1};
     my $exit_code = $? >> 8;
@@ -122,16 +124,16 @@ sub handle_start_oauth {
                 my $user_code = $device_data->{user_code} || '';
                 my $expires_in = $device_data->{expires_in} || 0;
 
-                $template->param('OAUTH_INIT_SUCCESS' => 1);
+                $template->param('DEVICE_CODE_SUCCESS' => 1);
                 $template->param('OAUTH_VERIFICATION_URI' => $verification_uri);
                 $template->param('OAUTH_USER_CODE' => $user_code);
                 $template->param('OAUTH_EXPIRES_MINUTES' => int($expires_in / 60));
-                $template->param('OAUTH_INIT_OUTPUT' => $output);
+                $template->param('DEVICE_CODE_OUTPUT' => $output);
             }
         }
     } else {
-        $template->param('OAUTH_INIT_ERROR' => 1);
-        $template->param('OAUTH_INIT_OUTPUT' => $output);
+        $template->param('DEVICE_CODE_ERROR' => 1);
+        $template->param('DEVICE_CODE_OUTPUT' => $output);
     }
 }
 
@@ -169,11 +171,22 @@ sub handle_restart_bridge {
 #
 
 sub prepare_template_vars {
-    my ($page, $tokens, $config, $bridge_status) = @_;
+    my ($page, $tokens, $config, $bridge_status, $device_code_data) = @_;
 
     # Current page
     $template->param('PAGE_MAIN' => $page eq 'main');
     $template->param('PAGE_LOGS' => $page eq 'logs');
+
+    # Device code status
+    if ($device_code_data && exists $device_code_data->{device_code}) {
+        my $now = time();
+        # Check if device code has timestamp (creation time)
+        # If not, we can't determine expiry, so assume it's still valid
+        my $device_code_valid = 1;
+
+        $template->param('DEVICE_CODE_EXISTS' => 1);
+        $template->param('DEVICE_CODE_VALID' => $device_code_valid);
+    }
 
     # Authentication status
     if ($tokens && exists $tokens->{gcid}) {
@@ -212,14 +225,19 @@ sub prepare_template_vars {
         $template->param('CLIENT_ID' => $config->{client_id} || '');
         $template->param('STREAM_HOST' => $config->{stream_host} || '');
         $template->param('STREAM_PORT' => $config->{stream_port} || 8883);
+        $template->param('STREAM_USERNAME' => $config->{stream_username} || '');
         $template->param('MQTT_TOPIC_PREFIX' => $config->{mqtt_topic_prefix} || 'bmw');
 
         if ($config->{vins} && ref($config->{vins}) eq 'ARRAY') {
             $template->param('VINS' => join("\n", @{$config->{vins}}));
         }
 
-        my $config_complete = $config->{client_id} && $config->{stream_host} &&
+        my $config_has_client_id = $config->{client_id} && $config->{client_id} ne '';
+        my $config_complete = $config_has_client_id && $config->{stream_host} &&
+                             $config->{stream_username} &&
                              $config->{vins} && @{$config->{vins}} > 0;
+
+        $template->param('CONFIG_HAS_CLIENT_ID' => $config_has_client_id);
         $template->param('CONFIG_COMPLETE' => $config_complete);
     }
 
@@ -329,6 +347,22 @@ sub read_log {
 
     my $output = qx{tail -n $lines "$logfile" 2>&1};
     return $output || "Empty log file";
+}
+
+sub load_device_code {
+    my $device_file = "$data_dir/device_code.json";
+    return undef unless -f $device_file;
+
+    my $json_text;
+    if (open(my $fh, '<', $device_file)) {
+        local $/;
+        $json_text = <$fh>;
+        close($fh);
+    } else {
+        return undef;
+    }
+
+    return eval { decode_json($json_text) };
 }
 
 sub update_client_id_in_scripts {

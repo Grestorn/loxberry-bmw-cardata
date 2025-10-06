@@ -147,8 +147,8 @@ sub load_configuration {
         return 0;
     }
 
-    unless (exists $current_tokens->{id_token} && exists $current_tokens->{gcid}) {
-        log_msg("ERROR", "Invalid tokens file: missing id_token or gcid");
+    unless (exists $current_tokens->{id_token}) {
+        log_msg("ERROR", "Invalid tokens file: missing id_token");
         return 0;
     }
 
@@ -166,14 +166,14 @@ sub load_configuration {
     }
 
     # Validate required config
-    unless (exists $current_config->{stream_host} && exists $current_config->{stream_port}) {
-        log_msg("ERROR", "Invalid config: missing stream_host or stream_port");
+    unless (exists $current_config->{stream_host} && exists $current_config->{stream_port} && exists $current_config->{stream_username}) {
+        log_msg("ERROR", "Invalid config: missing stream_host, stream_port, or stream_username");
         log_msg("ERROR", "Please configure the plugin via web interface");
         return 0;
     }
 
     log_msg("INFO", "Configuration loaded successfully");
-    log_msg("DEBUG", "GCID: $current_tokens->{gcid}") if $debug;
+    log_msg("DEBUG", "Stream username: $current_config->{stream_username}") if $debug;
     log_msg("DEBUG", "Stream host: $current_config->{stream_host}:$current_config->{stream_port}") if $debug;
 
     return 1;
@@ -188,6 +188,7 @@ sub get_default_config {
     return {
         stream_host => '',
         stream_port => 8883,
+        stream_username => '',
         vins => [],
         mqtt_topic_prefix => 'bmw',
     };
@@ -286,22 +287,22 @@ sub connect_to_bmw_mqtt {
 
     my $host = $current_config->{stream_host};
     my $port = $current_config->{stream_port};
-    my $gcid = $current_tokens->{gcid};
+    my $stream_username = $current_config->{stream_username};
     my $id_token = $current_tokens->{id_token};
 
-    unless ($host && $port) {
-        log_msg("ERROR", "Missing BMW MQTT host or port in configuration");
+    unless ($host && $port && $stream_username) {
+        log_msg("ERROR", "Missing BMW MQTT host, port, or stream_username in configuration");
         return 0;
     }
 
     my $broker_url = BMW_MQTT_PROTOCOL . "://$host:$port";
-    log_msg("INFO", "Connecting to $broker_url as user $gcid");
+    log_msg("INFO", "Connecting to $broker_url as user $stream_username");
 
     eval {
         $bmw_mqtt = Net::MQTT::Simple->new($broker_url);
 
-        # Authenticate with GCID as username and ID token as password
-        $bmw_mqtt->login($gcid, $id_token);
+        # Authenticate with stream_username as username and ID token as password
+        $bmw_mqtt->login($stream_username, $id_token);
 
         log_msg("INFO", "Successfully authenticated to BMW MQTT");
 
@@ -310,12 +311,12 @@ sub connect_to_bmw_mqtt {
 
         if (@vins == 0) {
             log_msg("WARN", "No VINs configured, subscribing to all user topics");
-            my $topic = "$gcid/#";
+            my $topic = "$stream_username/#";
             log_msg("INFO", "Subscribing to topic: $topic");
             $bmw_mqtt->subscribe($topic, \&handle_bmw_message);
         } else {
             foreach my $vin (@vins) {
-                my $topic = "$gcid/$vin";
+                my $topic = "$stream_username/$vin";
                 log_msg("INFO", "Subscribing to topic: $topic");
                 $bmw_mqtt->subscribe($topic, \&handle_bmw_message);
             }
