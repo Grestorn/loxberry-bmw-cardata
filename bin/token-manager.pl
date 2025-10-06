@@ -15,9 +15,7 @@ use constant {
 };
 
 # Plugin data directory
-my $script_dir = dirname(__FILE__);
-my $plugin_dir = dirname($script_dir);
-my $data_dir = "$plugin_dir/data";
+my $data_dir = "REPLACELBPDATADIR";
 my $config_file = "$data_dir/config.json";
 my $tokens_file = "$data_dir/tokens.json";
 

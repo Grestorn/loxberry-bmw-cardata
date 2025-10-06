@@ -20,9 +20,9 @@ use constant {
 };
 
 # Plugin directories
-my $script_dir = dirname(__FILE__);
-my $plugin_dir = dirname($script_dir);
-my $data_dir = "$plugin_dir/data";
+my $bin_dir = "REPLACELBPBINDIR";
+my $data_dir = "REPLACELBPDATADIR";
+my $log_dir = "REPLACELBPLOGDIR";
 my $tokens_file = "$data_dir/tokens.json";
 my $config_file = "$data_dir/config.json";
 
@@ -215,7 +215,7 @@ sub check_and_refresh_tokens {
         log_msg("INFO", "Token expires soon (${time_left}s left), triggering refresh...");
 
         # Call token-manager.pl to refresh
-        my $token_manager = "$script_dir/token-manager.pl";
+        my $token_manager = "$bin_dir/token-manager.pl";
         if (-x $token_manager) {
             my $result = system($token_manager, 'check');
             if ($result == 0) {
@@ -400,7 +400,7 @@ sub daemonize {
 
     chdir '/' or die "Can't chdir to /: $!";
     open STDIN, '<', '/dev/null' or die "Can't read /dev/null: $!";
-    open STDOUT, '>>', '/opt/loxberry/log/plugins/loxberry-bmw-cardata/bridge.log' or die "Can't write to log: $!";
+    open STDOUT, '>>', "$log_dir/bridge.log" or die "Can't write to log: $!";
     open STDERR, '>>&STDOUT' or die "Can't dup stdout: $!";
 
     defined(my $pid = fork) or die "Can't fork: $!";

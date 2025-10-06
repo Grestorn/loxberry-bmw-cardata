@@ -373,3 +373,4 @@ This plugin should implement:
 - BMW MQTT requires SSL/TLS - use Net::MQTT::Simple with mqtts:// protocol
 - Token refresh must happen BEFORE expiry (recommend 50 minutes for 1-hour tokens)
 - Only ONE MQTT connection per GCID allowed - daemon must handle reconnection gracefully
+- Es dürfen keine absoluten Pfade verwendet werden, sondern ausschließlich die Platthalter, die in https://wiki.loxberry.de/entwickler/plugin_fur_den_loxberry_entwickeln_ab_version_1x/automatisches_ersetzen_der_pluginverzeichnisse_replace definiert sind. Sie werden bei der Installation automatisch überschrieben.

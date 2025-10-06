@@ -4,12 +4,11 @@
 # Controls the bmw-cardata-bridge daemon
 #
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLUGIN_DIR="$(dirname "$SCRIPT_DIR")"
-DATA_DIR="$PLUGIN_DIR/data"
+SCRIPT_DIR="REPLACELBPBINDIR"
+DATA_DIR="REPLACELBPDATADIR"
 DAEMON="$SCRIPT_DIR/bmw-cardata-bridge.pl"
 PID_FILE="$DATA_DIR/bridge.pid"
-LOG_FILE="/opt/loxberry/log/plugins/loxberry-bmw-cardata/bridge.log"
+LOG_FILE="REPLACELBPLOGDIR/bridge.log"
 
 # Ensure log directory exists
 mkdir -p "$(dirname "$LOG_FILE")"
