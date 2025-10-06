@@ -144,7 +144,7 @@ const generateChangelog = (version) => {
       args = '-p a';
       break;
   }
-  execSync(`node_modules/.bin/changelog ${args}`);
+  execSync(`node_modules/.bin/changelog.cmd ${args}`);
 };
 
 const getPackage = () => {
