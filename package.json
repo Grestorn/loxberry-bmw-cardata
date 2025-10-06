@@ -1,6 +1,6 @@
 {
   "name": "loxberry-loxberry-bmw-cardata",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "",
   "scripts": {
     "release:major": "node .github/release.js major false",
