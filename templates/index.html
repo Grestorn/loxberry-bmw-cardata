@@ -1,0 +1,261 @@
+<!-- BMW CarData Plugin Web Interface -->
+
+<TMPL_IF PAGE_MAIN>
+
+<!-- Status Messages -->
+<TMPL_IF SAVE_SUCCESS>
+<div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+    <strong><TMPL_VAR SAVE_MESSAGE></strong>
+</div>
+</TMPL_IF>
+
+<TMPL_IF OAUTH_INIT_SUCCESS>
+<div class="ui-state-highlight ui-corner-all" style="padding: 15px; margin-bottom: 20px;">
+    <h3 style="margin-top: 0;"><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span> <TMPL_VAR OAUTH.AUTH_REQUIRED_TITLE></h3>
+
+    <p><strong><TMPL_VAR OAUTH.AUTH_INSTRUCTIONS></strong></p>
+
+    <div style="background: #fff; border: 2px solid #0066cc; border-radius: 5px; padding: 15px; margin: 15px 0;">
+        <p style="margin-top: 0;"><strong><TMPL_VAR OAUTH.VERIFICATION_LINK_LABEL>:</strong></p>
+        <p style="margin: 10px 0;">
+            <a href="<TMPL_VAR OAUTH_VERIFICATION_URI>" target="_blank"
+               style="display: inline-block; padding: 12px 20px; background: #0066cc; color: white;
+                      text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">
+                <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
+            </a>
+        </p>
+        <p style="font-size: 12px; color: #666;"><TMPL_VAR OAUTH.LINK_OPENS_NEW_TAB></p>
+    </div>
+
+    <TMPL_IF OAUTH_USER_CODE>
+    <p><strong><TMPL_VAR OAUTH.USER_CODE_LABEL>:</strong> <code style="font-size: 18px; background: #f0f0f0; padding: 5px 10px; border-radius: 3px;"><TMPL_VAR OAUTH_USER_CODE></code></p>
+    </TMPL_IF>
+
+    <p><strong><TMPL_VAR OAUTH.CODE_EXPIRES>:</strong> <TMPL_VAR OAUTH_EXPIRES_MINUTES> <TMPL_VAR STATUS.MINUTES></p>
+
+    <div style="background: #fffbcc; border-left: 4px solid #ffcc00; padding: 10px; margin: 15px 0;">
+        <p style="margin: 0;"><strong><TMPL_VAR OAUTH.NEXT_STEPS>:</strong></p>
+        <ol style="margin: 10px 0 0 20px; padding: 0;">
+            <li><TMPL_VAR OAUTH.STEP_CLICK_LINK></li>
+            <li><TMPL_VAR OAUTH.STEP_LOGIN_BMW></li>
+            <li><TMPL_VAR OAUTH.STEP_APPROVE></li>
+            <li><TMPL_VAR OAUTH.STEP_RETURN></li>
+        </ol>
+    </div>
+
+    <details style="margin-top: 15px;">
+        <summary style="cursor: pointer; color: #0066cc;"><TMPL_VAR OAUTH.SHOW_TECHNICAL_DETAILS></summary>
+        <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px; overflow: auto;"><TMPL_VAR OAUTH_INIT_OUTPUT></pre>
+    </details>
+</div>
+</TMPL_IF>
+
+<TMPL_IF OAUTH_INIT_ERROR>
+<div class="ui-state-error ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+    <strong><TMPL_VAR STATUS.OAUTH_ERROR></strong>
+    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR OAUTH_INIT_OUTPUT></pre>
+</div>
+</TMPL_IF>
+
+<TMPL_IF OAUTH_POLL_SUCCESS>
+<div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em;"></span>
+    <strong><TMPL_VAR STATUS.OAUTH_SUCCESS></strong>
+    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR OAUTH_POLL_OUTPUT></pre>
+</div>
+</TMPL_IF>
+
+<TMPL_IF OAUTH_POLL_ERROR>
+<div class="ui-state-error ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+    <strong><TMPL_VAR STATUS.OAUTH_POLL_ERROR></strong>
+    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR OAUTH_POLL_OUTPUT></pre>
+</div>
+</TMPL_IF>
+
+<TMPL_IF BRIDGE_ACTION_OUTPUT>
+<div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR BRIDGE_ACTION_OUTPUT></pre>
+</div>
+</TMPL_IF>
+
+<!-- Authentication Status -->
+<h2><TMPL_VAR STATUS.AUTH_TITLE></h2>
+<div class="ui-widget" style="margin-bottom: 20px;">
+    <div class="ui-widget-content ui-corner-all" style="padding: 15px;">
+        <TMPL_IF AUTH_NONE>
+            <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+            <strong><TMPL_VAR STATUS.NOT_AUTHENTICATED></strong></p>
+            <p><TMPL_VAR STATUS.AUTH_INSTRUCTIONS></p>
+        </TMPL_IF>
+
+        <TMPL_IF AUTH_VALID>
+            <p><span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em; color: green;"></span>
+            <strong><TMPL_VAR STATUS.AUTHENTICATED></strong></p>
+            <p><TMPL_VAR STATUS.USER_ID>: <strong><TMPL_VAR GCID></strong></p>
+            <p><TMPL_VAR STATUS.TOKEN_EXPIRES>: <strong><TMPL_VAR TOKEN_EXPIRES_MINUTES></strong> <TMPL_VAR STATUS.MINUTES></p>
+            <p><TMPL_VAR STATUS.REFRESH_VALID>: <strong><TMPL_VAR REFRESH_EXPIRES_DAYS></strong> <TMPL_VAR STATUS.DAYS></p>
+        </TMPL_IF>
+
+        <TMPL_IF AUTH_EXPIRED>
+            <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em; color: orange;"></span>
+            <strong><TMPL_VAR STATUS.TOKEN_EXPIRED></strong></p>
+            <p><TMPL_VAR STATUS.USER_ID>: <strong><TMPL_VAR GCID></strong></p>
+            <TMPL_IF REFRESH_EXPIRED>
+                <p style="color: red;"><TMPL_VAR STATUS.REFRESH_EXPIRED></p>
+            <TMPL_ELSE>
+                <p><TMPL_VAR STATUS.REFRESH_VALID>: <strong><TMPL_VAR REFRESH_EXPIRES_DAYS></strong> <TMPL_VAR STATUS.DAYS></p>
+                <p><TMPL_VAR STATUS.AUTO_REFRESH_INFO></p>
+            </TMPL_IF>
+        </TMPL_IF>
+    </div>
+</div>
+
+<!-- OAuth Authentication -->
+<TMPL_IF AUTH_NONE>
+<h2><TMPL_VAR OAUTH.TITLE></h2>
+<div class="ui-widget" style="margin-bottom: 20px;">
+    <div class="ui-widget-content ui-corner-all" style="padding: 15px;">
+        <ol>
+            <li><TMPL_VAR OAUTH.STEP1></li>
+            <li><TMPL_VAR OAUTH.STEP2></li>
+            <li><TMPL_VAR OAUTH.STEP3>
+                <form method="post" action="index.cgi">
+                    <input type="hidden" name="action" value="start_oauth">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all">
+                        <TMPL_VAR OAUTH.START_BUTTON>
+                    </button>
+                </form>
+            </li>
+            <li><TMPL_VAR OAUTH.STEP4>
+                <form method="post" action="index.cgi" style="margin-top: 10px;">
+                    <input type="hidden" name="action" value="check_oauth">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all">
+                        <TMPL_VAR OAUTH.POLL_BUTTON>
+                    </button>
+                </form>
+            </li>
+        </ol>
+    </div>
+</div>
+</TMPL_IF>
+
+<TMPL_IF REFRESH_EXPIRED>
+<h2><TMPL_VAR OAUTH.REAUTH_TITLE></h2>
+<div class="ui-widget" style="margin-bottom: 20px;">
+    <div class="ui-state-error ui-corner-all" style="padding: 15px;">
+        <p><TMPL_VAR OAUTH.REAUTH_MESSAGE></p>
+        <form method="post" action="index.cgi">
+            <input type="hidden" name="action" value="start_oauth">
+            <button type="submit" class="ui-button ui-widget ui-corner-all">
+                <TMPL_VAR OAUTH.START_BUTTON>
+            </button>
+        </form>
+    </div>
+</div>
+</TMPL_IF>
+
+<!-- Configuration -->
+<h2><TMPL_VAR CONFIG.TITLE></h2>
+<form method="post" action="index.cgi">
+    <input type="hidden" name="action" value="save_config">
+
+    <div class="ui-widget" style="margin-bottom: 20px;">
+        <div class="ui-widget-content ui-corner-all" style="padding: 15px;">
+            <p><label for="client_id"><strong><TMPL_VAR CONFIG.CLIENT_ID>:</strong></label>
+            <br><small><TMPL_VAR CONFIG.CLIENT_ID_HELP></small></p>
+            <input type="text" id="client_id" name="client_id" value="<TMPL_VAR CLIENT_ID>"
+                   style="width: 100%; max-width: 500px;" required>
+
+            <p style="margin-top: 15px;"><label for="stream_host"><strong><TMPL_VAR CONFIG.STREAM_HOST>:</strong></label>
+            <br><small><TMPL_VAR CONFIG.STREAM_HOST_HELP></small></p>
+            <input type="text" id="stream_host" name="stream_host" value="<TMPL_VAR STREAM_HOST>"
+                   style="width: 100%; max-width: 500px;" required>
+
+            <p style="margin-top: 15px;"><label for="stream_port"><strong><TMPL_VAR CONFIG.STREAM_PORT>:</strong></label></p>
+            <input type="number" id="stream_port" name="stream_port" value="<TMPL_VAR STREAM_PORT>"
+                   min="1" max="65535" required>
+
+            <p style="margin-top: 15px;"><label for="vins"><strong><TMPL_VAR CONFIG.VINS>:</strong></label>
+            <br><small><TMPL_VAR CONFIG.VINS_HELP></small></p>
+            <textarea id="vins" name="vins" rows="4" style="width: 100%; max-width: 500px;" required><TMPL_VAR VINS></textarea>
+
+            <p style="margin-top: 15px;"><label for="mqtt_topic_prefix"><strong><TMPL_VAR CONFIG.MQTT_PREFIX>:</strong></label>
+            <br><small><TMPL_VAR CONFIG.MQTT_PREFIX_HELP></small></p>
+            <input type="text" id="mqtt_topic_prefix" name="mqtt_topic_prefix" value="<TMPL_VAR MQTT_TOPIC_PREFIX>"
+                   style="width: 100%; max-width: 300px;" required>
+
+            <p style="margin-top: 20px;">
+                <button type="submit" class="ui-button ui-widget ui-corner-all">
+                    <TMPL_VAR CONFIG.SAVE_BUTTON>
+                </button>
+            </p>
+        </div>
+    </div>
+</form>
+
+<!-- Bridge Control -->
+<TMPL_IF AUTH_VALID>
+<TMPL_IF CONFIG_COMPLETE>
+<h2><TMPL_VAR BRIDGE.TITLE></h2>
+<div class="ui-widget" style="margin-bottom: 20px;">
+    <div class="ui-widget-content ui-corner-all" style="padding: 15px;">
+        <p><TMPL_VAR BRIDGE.STATUS>:
+            <TMPL_IF BRIDGE_RUNNING>
+                <strong style="color: green;"><TMPL_VAR BRIDGE.RUNNING></strong> (PID: <TMPL_VAR BRIDGE_PID>)
+            <TMPL_ELSE>
+                <strong style="color: red;"><TMPL_VAR BRIDGE.STOPPED></strong>
+            </TMPL_IF>
+        </p>
+
+        <div style="margin-top: 15px;">
+            <TMPL_IF BRIDGE_RUNNING>
+                <form method="post" action="index.cgi" style="display: inline;">
+                    <input type="hidden" name="action" value="stop_bridge">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all">
+                        <TMPL_VAR BRIDGE.STOP_BUTTON>
+                    </button>
+                </form>
+                <form method="post" action="index.cgi" style="display: inline;">
+                    <input type="hidden" name="action" value="restart_bridge">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all">
+                        <TMPL_VAR BRIDGE.RESTART_BUTTON>
+                    </button>
+                </form>
+            <TMPL_ELSE>
+                <form method="post" action="index.cgi" style="display: inline;">
+                    <input type="hidden" name="action" value="start_bridge">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all">
+                        <TMPL_VAR BRIDGE.START_BUTTON>
+                    </button>
+                </form>
+            </TMPL_IF>
+        </div>
+    </div>
+</div>
+</TMPL_IF>
+</TMPL_IF>
+
+</TMPL_IF>
+
+<!-- Logs Page -->
+<TMPL_IF PAGE_LOGS>
+
+<h2><TMPL_VAR LOGS.BRIDGE_TITLE></h2>
+<div class="ui-widget" style="margin-bottom: 20px;">
+    <div class="ui-widget-content ui-corner-all" style="padding: 15px;">
+        <pre style="background: #f5f5f5; padding: 10px; overflow: auto; max-height: 400px;"><TMPL_VAR BRIDGE_LOG></pre>
+    </div>
+</div>
+
+<h2><TMPL_VAR LOGS.TOKEN_TITLE></h2>
+<div class="ui-widget" style="margin-bottom: 20px;">
+    <div class="ui-widget-content ui-corner-all" style="padding: 15px;">
+        <pre style="background: #f5f5f5; padding: 10px; overflow: auto; max-height: 400px;"><TMPL_VAR TOKEN_LOG></pre>
+    </div>
+</div>
+
+</TMPL_IF>

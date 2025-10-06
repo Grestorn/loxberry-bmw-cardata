@@ -1,0 +1,32 @@
+# Node modules for release automation
+node_modules/
+
+# Plugin data directory - contains sensitive tokens and configuration
+data/
+
+# Log files
+*.log
+
+# Backup files
+*.bak
+*.backup
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# IDE specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# LoxBerry specific - installed plugin directories
+# (these would be on the LoxBerry system, not in development)
+/opt/loxberry/
+/data/

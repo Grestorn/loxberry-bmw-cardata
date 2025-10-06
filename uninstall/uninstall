@@ -1,0 +1,63 @@
+#!/bin/sh
+
+# To use important variables from command line use the following code:
+COMMAND=$0    # Zero argument is shell command
+PTEMPDIR=$1   # First argument is temp folder during install
+PSHNAME=$2    # Second argument is Plugin-Name for scipts etc.
+PDIR=$3       # Third argument is Plugin installation folder
+PVERSION=$4   # Forth argument is Plugin version
+#LBHOMEDIR=$5 # Comes from /etc/environment now. Fifth argument is
+              # Base folder of LoxBerry
+
+# Combine them with /etc/environment
+PCGI=$LBPCGI/$PDIR
+PHTML=$LBPHTML/$PDIR
+PTEMPL=$LBPTEMPL/$PDIR
+PDATA=$LBPDATA/$PDIR
+PLOG=$LBPLOG/$PDIR # Note! This is stored on a Ramdisk now!
+PCONFIG=$LBPCONFIG/$PDIR
+PSBIN=$LBPSBIN/$PDIR
+PBIN=$LBPBIN/$PDIR
+
+# BMW CarData Plugin Uninstallation
+echo "BMW CarData: Starting uninstallation..."
+
+# Stop the MQTT bridge daemon if running
+echo "BMW CarData: Stopping MQTT bridge daemon..."
+if [ -f "$PDATA/bridge.pid" ]; then
+    PID=$(cat "$PDATA/bridge.pid")
+    if ps -p "$PID" > /dev/null 2>&1; then
+        echo "BMW CarData: Stopping daemon (PID $PID)..."
+        kill -TERM "$PID"
+
+        # Wait for graceful shutdown
+        COUNTER=0
+        while ps -p "$PID" > /dev/null 2>&1 && [ $COUNTER -lt 10 ]; do
+            sleep 1
+            COUNTER=$((COUNTER + 1))
+        done
+
+        # Force kill if still running
+        if ps -p "$PID" > /dev/null 2>&1; then
+            echo "BMW CarData: Force stopping daemon..."
+            kill -KILL "$PID"
+        fi
+
+        echo "BMW CarData: Daemon stopped"
+    fi
+    rm -f "$PDATA/bridge.pid"
+fi
+
+# Optional: Clean up data directory (commented out by default - user may want to keep tokens/config)
+# Uncomment the following lines if you want to remove all data during uninstall
+# echo "BMW CarData: Cleaning up data directory..."
+# rm -f "$PDATA/tokens.json"
+# rm -f "$PDATA/config.json"
+# rm -f "$PDATA/pkce.json"
+# rm -f "$PDATA/device_code.json"
+
+echo "BMW CarData: Uninstallation completed"
+echo "Note: OAuth tokens and configuration were preserved in $PDATA"
+echo "Delete manually if needed: rm -rf $PDATA"
+
+exit 0;

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:wiki.loxberry.de)",
+      "WebFetch(domain:bmw-cardata.bmwgroup.com)",
+      "Bash(for dir in config dpkg templates uninstall webfrontend)",
+      "Bash(do if [ ! -f \"$dir/README.md\" ])",
+      "Bash(then echo \"Missing: $dir/README.md\")",
+      "Bash(fi)",
+      "Bash(done)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

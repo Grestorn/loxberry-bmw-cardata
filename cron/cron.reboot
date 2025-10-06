@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# BMW CarData Plugin - Reboot Script
+# This script runs at system startup in the context of the 'loxberry' user
+#
+# Documentation:
+
+PLUGINNAME=REPLACELBPPLUGINDIR
+LBHOMEDIR=/opt/loxberry
+LBPBINDIR=$LBHOMEDIR/bin/plugins/$PLUGINNAME
+LBPDATADIR=$LBHOMEDIR/data/plugins/$PLUGINNAME
+LBPLOGDIR=$LBHOMEDIR/log/plugins/$PLUGINNAME
+
+# Ensure log directory exists
+mkdir -p "$LBPLOGDIR"
+
+# Log startup
+echo "[$(date)] BMW CarData: Reboot script started" >> "$LBPLOGDIR/reboot.log"
+
+# Check if tokens exist before starting bridge
+if [ ! -f "$LBPDATADIR/tokens.json" ]; then
+    echo "[$(date)] BMW CarData: No tokens found. Skipping bridge start." >> "$LBPLOGDIR/reboot.log"
+    echo "[$(date)] BMW CarData: Please authenticate via web interface first." >> "$LBPLOGDIR/reboot.log"
+    exit 0
+fi
+
+# Check if config exists
+if [ ! -f "$LBPDATADIR/config.json" ]; then
+    echo "[$(date)] BMW CarData: No configuration found. Skipping bridge start." >> "$LBPLOGDIR/reboot.log"
+    echo "[$(date)] BMW CarData: Please configure plugin via web interface first." >> "$LBPLOGDIR/reboot.log"
+    exit 0
+fi
+
+# Start BMW CarData MQTT Bridge daemon
+echo "[$(date)] BMW CarData: Starting MQTT Bridge daemon..." >> "$LBPLOGDIR/reboot.log"
+"$LBPBINDIR/bmw-cardata-bridge.pl" --daemon >> "$LBPLOGDIR/reboot.log" 2>&1
+
+# Give daemon time to start
+sleep 3
+
+# Check if daemon started successfully
+if [ -f "$LBPDATADIR/bridge.pid" ]; then
+    PID=$(cat "$LBPDATADIR/bridge.pid")
+    if ps -p "$PID" > /dev/null 2>&1; then
+        echo "[$(date)] BMW CarData: MQTT Bridge daemon started successfully (PID $PID)" >> "$LBPLOGDIR/reboot.log"
+    else
+        echo "[$(date)] BMW CarData: Warning - PID file exists but process not running" >> "$LBPLOGDIR/reboot.log"
+    fi
+else
+    echo "[$(date)] BMW CarData: Warning - Daemon may not have started (no PID file)" >> "$LBPLOGDIR/reboot.log"
+fi
+
+exit 0

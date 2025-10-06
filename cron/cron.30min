@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# BMW CarData Plugin - 30 Minute Cron Job
+# This script runs every 30 minutes to refresh OAuth tokens
+#
+# Documentation:
+# https://wiki.loxberry.de/plugins/plugins_cron_and_daemons
+
+PLUGINNAME=REPLACELBPPLUGINDIR
+LBHOMEDIR=/opt/loxberry
+LBPBINDIR=$LBHOMEDIR/bin/plugins/$PLUGINNAME
+LBPLOGDIR=$LBHOMEDIR/log/plugins/$PLUGINNAME
+
+# Ensure log directory exists
+mkdir -p "$LBPLOGDIR"
+
+# Run token refresh check
+"$LBPBINDIR/token-manager.pl" check >> "$LBPLOGDIR/token-refresh.log" 2>&1
+
+exit 0
