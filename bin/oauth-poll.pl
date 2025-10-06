@@ -115,6 +115,26 @@ while (time() < $deadline && $attempt < $max_attempts) {
                 print "Full mapping response:\n";
                 print JSON->new->pretty->encode($mappings);
                 print "\n";
+
+                # Extract VINs and save to config if not already configured
+                my @vins = extract_vins_from_mappings($mappings);
+                if (@vins > 0) {
+                    print "Found VINs: " . join(", ", @vins) . "\n";
+
+                    # Check if config exists and if VINs are already configured
+                    if (-f $config_file) {
+                        my $existing_config = load_json($config_file);
+                        if (!$existing_config->{vins} || @{$existing_config->{vins}} == 0) {
+                            # Auto-fill VINs in config
+                            $existing_config->{vins} = \@vins;
+                            save_json($config_file, $existing_config);
+                            print "✓ VINs automatically added to configuration\n";
+                        } else {
+                            print "ℹ VINs already configured, skipping auto-fill\n";
+                        }
+                    }
+                }
+                print "\n";
             } else {
                 print "✗ Failed to retrieve vehicle mappings\n\n";
             }
@@ -213,8 +233,37 @@ sub save_json {
     my ($filename, $data) = @_;
 
     open(my $fh, '>', $filename) or die "Cannot write to $filename: $!\n";
-    print $fh encode_json($data);
+    print $fh JSON->new->pretty->encode($data);
     close($fh);
+
+    # Set appropriate permissions
+    chmod(0600, $filename);
+}
+
+# Extract VINs from vehicle mappings response
+sub extract_vins_from_mappings {
+    my ($mappings) = @_;
+    my @vins;
+
+    # The response can be either:
+    # 1. A single VehicleMappingDto object
+    # 2. An array of VehicleMappingDto objects
+
+    if (ref($mappings) eq 'HASH') {
+        # Single object
+        if (exists $mappings->{vin} && $mappings->{vin}) {
+            push @vins, $mappings->{vin};
+        }
+    } elsif (ref($mappings) eq 'ARRAY') {
+        # Array of objects
+        foreach my $mapping (@$mappings) {
+            if (ref($mapping) eq 'HASH' && exists $mapping->{vin} && $mapping->{vin}) {
+                push @vins, $mapping->{vin};
+            }
+        }
+    }
+
+    return @vins;
 }
 
 # Get vehicle mappings from BMW CarData API

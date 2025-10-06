@@ -75,6 +75,22 @@
 </div>
 </TMPL_IF>
 
+<TMPL_IF TOKEN_REFRESH_SUCCESS>
+<div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em;"></span>
+    <strong><TMPL_VAR STATUS.TOKEN_REFRESH_SUCCESS></strong>
+    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR TOKEN_REFRESH_OUTPUT></pre>
+</div>
+</TMPL_IF>
+
+<TMPL_IF TOKEN_REFRESH_ERROR>
+<div class="ui-state-error ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+    <strong><TMPL_VAR STATUS.TOKEN_REFRESH_ERROR></strong>
+    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR TOKEN_REFRESH_OUTPUT></pre>
+</div>
+</TMPL_IF>
+
 <TMPL_IF BRIDGE_ACTION_OUTPUT>
 <div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
     <span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
@@ -96,19 +112,55 @@
             <p><span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em; color: green;"></span>
             <strong><TMPL_VAR STATUS.AUTHENTICATED></strong></p>
             <p><TMPL_VAR STATUS.USER_ID>: <strong><TMPL_VAR GCID></strong></p>
+
+            <TMPL_IF ACCESS_TOKEN>
+            <div style="margin: 15px 0; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 3px;">
+                <p style="margin: 0 0 5px 0;"><strong><TMPL_VAR STATUS.CURRENT_ACCESS_TOKEN>:</strong></p>
+                <textarea readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 11px; resize: vertical;"><TMPL_VAR ACCESS_TOKEN></textarea>
+                <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #666;">
+                    <TMPL_VAR STATUS.TOKEN_COPY_HINT>
+                </p>
+            </div>
+            </TMPL_IF>
+
             <p><TMPL_VAR STATUS.TOKEN_EXPIRES>: <strong><TMPL_VAR TOKEN_EXPIRES_MINUTES></strong> <TMPL_VAR STATUS.MINUTES></p>
             <p><TMPL_VAR STATUS.REFRESH_VALID>: <strong><TMPL_VAR REFRESH_EXPIRES_DAYS></strong> <TMPL_VAR STATUS.DAYS></p>
+
+            <form method="post" action="index.cgi" style="margin-top: 10px;">
+                <input type="hidden" name="action" value="refresh_token">
+                <button type="submit" class="ui-button ui-widget ui-corner-all">
+                    <TMPL_VAR STATUS.REFRESH_TOKEN_BUTTON>
+                </button>
+            </form>
         </TMPL_IF>
 
         <TMPL_IF AUTH_EXPIRED>
             <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em; color: orange;"></span>
             <strong><TMPL_VAR STATUS.TOKEN_EXPIRED></strong></p>
             <p><TMPL_VAR STATUS.USER_ID>: <strong><TMPL_VAR GCID></strong></p>
+
+            <TMPL_IF ACCESS_TOKEN>
+            <div style="margin: 15px 0; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 3px;">
+                <p style="margin: 0 0 5px 0;"><strong><TMPL_VAR STATUS.CURRENT_ACCESS_TOKEN>:</strong></p>
+                <textarea readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 11px; resize: vertical;"><TMPL_VAR ACCESS_TOKEN></textarea>
+                <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #ff6600;">
+                    <TMPL_VAR STATUS.TOKEN_EXPIRED_HINT>
+                </p>
+            </div>
+            </TMPL_IF>
+
             <TMPL_IF REFRESH_EXPIRED>
                 <p style="color: red;"><TMPL_VAR STATUS.REFRESH_EXPIRED></p>
             <TMPL_ELSE>
                 <p><TMPL_VAR STATUS.REFRESH_VALID>: <strong><TMPL_VAR REFRESH_EXPIRES_DAYS></strong> <TMPL_VAR STATUS.DAYS></p>
                 <p><TMPL_VAR STATUS.AUTO_REFRESH_INFO></p>
+
+                <form method="post" action="index.cgi" style="margin-top: 10px;">
+                    <input type="hidden" name="action" value="refresh_token">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all">
+                        <TMPL_VAR STATUS.REFRESH_TOKEN_BUTTON>
+                    </button>
+                </form>
             </TMPL_IF>
         </TMPL_IF>
     </div>
@@ -179,12 +231,11 @@
             <p style="margin-top: 15px;"><label for="stream_host"><strong><TMPL_VAR CONFIG.STREAM_HOST>:</strong></label>
             <br><small><TMPL_VAR CONFIG.STREAM_HOST_HELP></small></p>
             <input type="text" id="stream_host" name="stream_host" value="<TMPL_VAR STREAM_HOST>"
-                   placeholder="customer.streaming-cardata.bmwgroup.com"
-                   style="width: 100%; max-width: 500px;">
+                   style="width: 100%; max-width: 500px;" required>
 
             <p style="margin-top: 15px;"><label for="stream_port"><strong><TMPL_VAR CONFIG.STREAM_PORT>:</strong></label></p>
             <input type="number" id="stream_port" name="stream_port" value="<TMPL_VAR STREAM_PORT>"
-                   placeholder="9000" min="1" max="65535">
+                   min="1" max="65535" required>
 
             <p style="margin-top: 15px;"><label for="stream_username"><strong><TMPL_VAR CONFIG.STREAM_USERNAME>:</strong></label>
             <br><small><TMPL_VAR CONFIG.STREAM_USERNAME_HELP></small></p>

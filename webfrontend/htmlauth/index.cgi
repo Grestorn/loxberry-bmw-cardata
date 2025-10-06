@@ -53,6 +53,8 @@ if ($action eq 'save_config') {
     handle_request_device_code();
 } elsif ($action eq 'check_oauth') {
     handle_check_oauth();
+} elsif ($action eq 'refresh_token') {
+    handle_refresh_token();
 } elsif ($action eq 'start_bridge') {
     handle_start_bridge();
 } elsif ($action eq 'stop_bridge') {
@@ -61,9 +63,9 @@ if ($action eq 'save_config') {
     handle_restart_bridge();
 }
 
-# Load current status
+# Load current status (create default config if not exists)
 my $tokens = load_tokens();
-my $config = load_config();
+my $config = load_or_create_config();
 my $bridge_status = get_bridge_status();
 my $device_code_data = load_device_code();
 
@@ -84,11 +86,11 @@ exit;
 sub handle_save_config {
     my $new_config = {
         client_id => $cgi->param('client_id') || '',
-        stream_host => $cgi->param('stream_host') || 'customer.streaming-cardata.bmwgroup.com',
-        stream_port => int($cgi->param('stream_port') || 9000),
+        stream_host => $cgi->param('stream_host') || '',
+        stream_port => int($cgi->param('stream_port') || 0),
         stream_username => $cgi->param('stream_username') || '',
         vins => [],
-        mqtt_topic_prefix => $cgi->param('mqtt_topic_prefix') || 'bmw',
+        mqtt_topic_prefix => $cgi->param('mqtt_topic_prefix') || '',
     };
 
     # Parse VINs (one per line)
@@ -161,6 +163,20 @@ sub handle_restart_bridge {
     $template->param('BRIDGE_ACTION_OUTPUT' => $output);
 }
 
+sub handle_refresh_token {
+    # Run token-manager.pl refresh --force
+    my $output = qx{$bin_dir/token-manager.pl refresh --force 2>&1};
+    my $exit_code = $? >> 8;
+
+    if ($exit_code == 0) {
+        $template->param('TOKEN_REFRESH_SUCCESS' => 1);
+        $template->param('TOKEN_REFRESH_OUTPUT' => $output);
+    } else {
+        $template->param('TOKEN_REFRESH_ERROR' => 1);
+        $template->param('TOKEN_REFRESH_OUTPUT' => $output);
+    }
+}
+
 #
 # Template Preparation
 #
@@ -197,6 +213,11 @@ sub prepare_template_vars {
         $template->param('AUTH_EXPIRED' => !$token_valid);
         $template->param('GCID' => $tokens->{gcid});
 
+        # Show current access token for manual API testing
+        if (exists $tokens->{access_token}) {
+            $template->param('ACCESS_TOKEN' => $tokens->{access_token});
+        }
+
         if ($token_valid) {
             my $time_left = $expires_at - $now;
             my $minutes_left = int($time_left / 60);
@@ -215,13 +236,13 @@ sub prepare_template_vars {
         $template->param('AUTH_NONE' => 1);
     }
 
-    # Configuration
+    # Configuration (always exists due to load_or_create_config)
     if ($config) {
-        $template->param('CLIENT_ID' => $config->{client_id} || '');
-        $template->param('STREAM_HOST' => $config->{stream_host} || 'customer.streaming-cardata.bmwgroup.com');
-        $template->param('STREAM_PORT' => $config->{stream_port} || 9000);
-        $template->param('STREAM_USERNAME' => $config->{stream_username} || '');
-        $template->param('MQTT_TOPIC_PREFIX' => $config->{mqtt_topic_prefix} || 'bmw');
+        $template->param('CLIENT_ID' => $config->{client_id});
+        $template->param('STREAM_HOST' => $config->{stream_host});
+        $template->param('STREAM_PORT' => $config->{stream_port});
+        $template->param('STREAM_USERNAME' => $config->{stream_username});
+        $template->param('MQTT_TOPIC_PREFIX' => $config->{mqtt_topic_prefix});
 
         if ($config->{vins} && ref($config->{vins}) eq 'ARRAY') {
             $template->param('VINS' => join("\n", @{$config->{vins}}));
@@ -282,6 +303,33 @@ sub load_config {
     }
 
     return eval { decode_json($json_text) };
+}
+
+sub load_or_create_config {
+    # Try to load existing config
+    my $config = load_config();
+    return $config if $config;
+
+    # Create default config if not exists
+    my $default_config = {
+        client_id => '',
+        stream_host => 'customer.streaming-cardata.bmwgroup.com',
+        stream_port => 9000,
+        stream_username => '',
+        vins => [],
+        mqtt_topic_prefix => 'bmw',
+    };
+
+    # Ensure data directory exists
+    unless (-d $data_dir) {
+        require File::Path;
+        File::Path::make_path($data_dir);
+    }
+
+    # Save default config
+    save_config($default_config);
+
+    return $default_config;
 }
 
 sub load_json {

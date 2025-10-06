@@ -47,15 +47,17 @@ PSBIN=$LBPSBIN/$PDIR
 PBIN=$LBPBIN/$PDIR
 
 echo "<INFO> Creating temporary folders for upgrading"
-mkdir -p /tmp/$PTEMPDIR\_upgrade
-mkdir -p /tmp/$PTEMPDIR\_upgrade/config
-mkdir -p /tmp/$PTEMPDIR\_upgrade/data
-mkdir -p /tmp/$PTEMPDIR\_upgrade/logs
+mkdir -p $PTEMPPATH/upgrade
+mkdir -p $PTEMPPATH/upgrade/config
+mkdir -p $PTEMPPATH/upgrade/data
+mkdir -p $PTEMPPATH/upgrade/logs
 
 echo "<INFO> Backing up existing config files"
-cp -p -v -r $PCONFIG /tmp/$PTEMPDIR\_upgrade/config
-cp -p -v -r $PDATA /tmp/$PTEMPDIR\_upgrade/data
-cp -p -v -r $PLOGS /tmp/$PTEMPDIR\_upgrade/logs
+cp -p -v -r $PCONFIG/* $PTEMPPATH/upgrade/config
+cp -p -v -r $PDATA/* $PTEMPPATH/upgrade/data
+cp -p -v -r $PLOGS/* $PTEMPPATH/upgrade/logs
+
+
 # Your code goes here
  
 exit 0
