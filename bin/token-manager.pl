@@ -9,7 +9,6 @@ use Getopt::Long;
 
 # BMW CarData API Configuration
 use constant {
-    CLIENT_ID => 'YOUR_CLIENT_ID_HERE',  # Must match oauth-init.pl
     API_BASE_URL => 'https://customer.bmwgroup.com',
     TOKEN_ENDPOINT => '/gcdm/oauth/token',
     REFRESH_MARGIN => 300,  # Refresh tokens 5 minutes before expiry
@@ -19,7 +18,15 @@ use constant {
 my $script_dir = dirname(__FILE__);
 my $plugin_dir = dirname($script_dir);
 my $data_dir = "$plugin_dir/data";
+my $config_file = "$data_dir/config.json";
 my $tokens_file = "$data_dir/tokens.json";
+
+# Load configuration
+my $CLIENT_ID;
+if (-f $config_file) {
+    my $config = load_json($config_file);
+    $CLIENT_ID = $config->{client_id} if $config && $config->{client_id};
+}
 
 # Command line options
 my $command = $ARGV[0] || 'check';

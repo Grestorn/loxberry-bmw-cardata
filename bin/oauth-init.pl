@@ -11,7 +11,6 @@ use File::Basename;
 
 # BMW CarData API Configuration
 use constant {
-    CLIENT_ID => 'YOUR_CLIENT_ID_HERE',  # Replace with your Client ID from BMW CarData Portal
     API_BASE_URL => 'https://customer.bmwgroup.com',
     DEVICE_CODE_ENDPOINT => '/gcdm/oauth/device/code',
     TOKEN_ENDPOINT => '/gcdm/oauth/token',
@@ -22,11 +21,26 @@ use constant {
 my $script_dir = dirname(__FILE__);
 my $plugin_dir = dirname($script_dir);
 my $data_dir = "$plugin_dir/data";
+my $config_file = "$data_dir/config.json";
 
 # Ensure data directory exists
 unless (-d $data_dir) {
     make_path($data_dir) or die "Cannot create data directory $data_dir: $!\n";
 }
+
+# Load configuration
+unless (-f $config_file) {
+    die "ERROR: Configuration file not found: $config_file\n" .
+        "Please configure the plugin via web interface first.\n";
+}
+
+my $config = load_json($config_file);
+unless ($config->{client_id} && $config->{client_id} ne '') {
+    die "ERROR: CLIENT_ID not configured.\n" .
+        "Please set your BMW CarData Client ID in the web interface.\n";
+}
+
+my $CLIENT_ID = $config->{client_id};
 
 print "=== BMW CarData OAuth Initialization ===\n\n";
 
@@ -137,7 +151,7 @@ sub request_device_code {
     my $url = API_BASE_URL . DEVICE_CODE_ENDPOINT;
 
     my $response = $ua->post($url, {
-        client_id => CLIENT_ID,
+        client_id => $CLIENT_ID,
         response_type => 'device_code',
         scope => SCOPES,
         code_challenge => $code_challenge,
@@ -158,6 +172,17 @@ sub request_device_code {
     }
 
     return $data;
+}
+
+# Load JSON file
+sub load_json {
+    my ($filename) = @_;
+
+    open(my $fh, '<', $filename) or die "Cannot read $filename: $!\n";
+    my $content = do { local $/; <$fh> };
+    close($fh);
+
+    return decode_json($content);
 }
 
 # Save data as JSON file

@@ -84,8 +84,8 @@ exit;
 sub handle_save_config {
     my $new_config = {
         client_id => $cgi->param('client_id') || '',
-        stream_host => $cgi->param('stream_host') || '',
-        stream_port => int($cgi->param('stream_port') || 8883),
+        stream_host => $cgi->param('stream_host') || 'customer.streaming-cardata.bmwgroup.com',
+        stream_port => int($cgi->param('stream_port') || 9000),
         stream_username => $cgi->param('stream_username') || '',
         vins => [],
         mqtt_topic_prefix => $cgi->param('mqtt_topic_prefix') || 'bmw',
@@ -98,11 +98,6 @@ sub handle_save_config {
 
     # Save config
     save_config($new_config);
-
-    # Update CLIENT_ID in scripts if changed
-    if ($new_config->{client_id} && $new_config->{client_id} ne '') {
-        update_client_id_in_scripts($new_config->{client_id});
-    }
 
     $template->param('SAVE_SUCCESS' => 1);
     $template->param('SAVE_MESSAGE' => $L{'CONFIG.SAVED'});
@@ -223,8 +218,8 @@ sub prepare_template_vars {
     # Configuration
     if ($config) {
         $template->param('CLIENT_ID' => $config->{client_id} || '');
-        $template->param('STREAM_HOST' => $config->{stream_host} || '');
-        $template->param('STREAM_PORT' => $config->{stream_port} || 8883);
+        $template->param('STREAM_HOST' => $config->{stream_host} || 'customer.streaming-cardata.bmwgroup.com');
+        $template->param('STREAM_PORT' => $config->{stream_port} || 9000);
         $template->param('STREAM_USERNAME' => $config->{stream_username} || '');
         $template->param('MQTT_TOPIC_PREFIX' => $config->{mqtt_topic_prefix} || 'bmw');
 
@@ -234,8 +229,7 @@ sub prepare_template_vars {
 
         my $config_has_client_id = $config->{client_id} && $config->{client_id} ne '';
         my $config_complete = $config_has_client_id && $config->{stream_host} &&
-                             $config->{stream_username} &&
-                             $config->{vins} && @{$config->{vins}} > 0;
+                             $config->{stream_username};
 
         $template->param('CONFIG_HAS_CLIENT_ID' => $config_has_client_id);
         $template->param('CONFIG_COMPLETE' => $config_complete);
@@ -365,38 +359,3 @@ sub load_device_code {
     return eval { decode_json($json_text) };
 }
 
-sub update_client_id_in_scripts {
-    my ($client_id) = @_;
-
-    my @scripts = (
-        "$bin_dir/oauth-init.pl",
-        "$bin_dir/oauth-poll.pl",
-        "$bin_dir/token-manager.pl",
-        "$bin_dir/bmw-cardata-bridge.pl",
-    );
-
-    foreach my $script (@scripts) {
-        next unless -f $script;
-
-        # Read file
-        open(my $fh, '<', $script) or next;
-        my @lines = <$fh>;
-        close($fh);
-
-        # Replace CLIENT_ID
-        my $modified = 0;
-        foreach my $line (@lines) {
-            if ($line =~ /^\s*CLIENT_ID\s*=>\s*['"].*['"]/) {
-                $line = "    CLIENT_ID => '$client_id',\n";
-                $modified = 1;
-            }
-        }
-
-        # Write back if modified
-        if ($modified) {
-            open($fh, '>', $script) or next;
-            print $fh @lines;
-            close($fh);
-        }
-    }
-}

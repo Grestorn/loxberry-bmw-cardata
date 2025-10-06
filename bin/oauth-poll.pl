@@ -9,7 +9,6 @@ use File::Basename;
 
 # BMW CarData API Configuration
 use constant {
-    CLIENT_ID => 'YOUR_CLIENT_ID_HERE',  # Must match oauth-init.pl
     API_BASE_URL => 'https://customer.bmwgroup.com',
     TOKEN_ENDPOINT => '/gcdm/oauth/token',
     CARDATA_API_BASE_URL => 'https://api-cardata.bmwgroup.com',
@@ -21,9 +20,24 @@ my $script_dir = dirname(__FILE__);
 my $plugin_dir = dirname($script_dir);
 my $data_dir = "$plugin_dir/data";
 
+my $config_file = "$data_dir/config.json";
 my $pkce_file = "$data_dir/pkce.json";
 my $device_file = "$data_dir/device_code.json";
 my $tokens_file = "$data_dir/tokens.json";
+
+# Load configuration
+unless (-f $config_file) {
+    die "ERROR: Configuration file not found: $config_file\n" .
+        "Please configure the plugin via web interface first.\n";
+}
+
+my $config = load_json($config_file);
+unless ($config->{client_id} && $config->{client_id} ne '') {
+    die "ERROR: CLIENT_ID not configured.\n" .
+        "Please set your BMW CarData Client ID in the web interface.\n";
+}
+
+my $CLIENT_ID = $config->{client_id};
 
 print "=== BMW CarData OAuth Token Polling ===\n\n";
 

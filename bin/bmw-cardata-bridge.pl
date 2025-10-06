@@ -13,7 +13,6 @@ use Getopt::Long;
 
 # Configuration
 use constant {
-    CLIENT_ID => 'YOUR_CLIENT_ID_HERE',
     BMW_MQTT_PROTOCOL => 'mqtts',  # MQTT over SSL/TLS
     RECONNECT_DELAY => 10,          # Seconds to wait before reconnect
     TOKEN_CHECK_INTERVAL => 300,    # Check token expiry every 5 minutes
@@ -26,6 +25,8 @@ my $plugin_dir = dirname($script_dir);
 my $data_dir = "$plugin_dir/data";
 my $tokens_file = "$data_dir/tokens.json";
 my $config_file = "$data_dir/config.json";
+
+# Note: CLIENT_ID is read from config file and not needed by bridge (only for OAuth operations)
 
 # Command line options
 my $daemon = 0;
