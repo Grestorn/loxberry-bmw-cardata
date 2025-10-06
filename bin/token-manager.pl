@@ -269,7 +269,7 @@ sub request_token_refresh {
     my $response = $ua->post($url, {
         grant_type => 'refresh_token',
         refresh_token => $refresh_token,
-        client_id => CLIENT_ID,
+        client_id => $CLIENT_ID,
     });
 
     unless ($response->is_success) {

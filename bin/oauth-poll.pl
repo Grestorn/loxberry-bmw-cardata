@@ -181,7 +181,7 @@ sub poll_for_token {
     my $url = API_BASE_URL . TOKEN_ENDPOINT;
 
     my $response = $ua->post($url, {
-        client_id => CLIENT_ID,
+        client_id => $CLIENT_ID,
         device_code => $device_code,
         grant_type => 'urn:ietf:params:oauth:grant-type:device_code',
         code_verifier => $code_verifier,
