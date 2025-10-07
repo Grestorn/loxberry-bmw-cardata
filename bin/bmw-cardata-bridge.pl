@@ -32,8 +32,6 @@ my $log_dir = "REPLACELBPLOGDIR";
 my $tokens_file = "$data_dir/tokens.json";
 my $config_file = "$data_dir/config.json";
 
-my $log = LoxBerry::Log->new ( name => 'bmw-cardata-bridge' );
-
 # Note: CLIENT_ID is read from config file and not needed by bridge (only for OAuth operations)
 
 # Command line options
@@ -53,6 +51,13 @@ my $current_config;
 my $last_token_check = 0;
 my $connection_active = 0;
 
+# Initialize logging
+my $log = LoxBerry::Log->new(
+    name => 'bmw-cardata-bridge',
+    stderr => 1,  # Redirect STDERR to log
+    addtime => 1  # Add timestamps to log entries
+);
+
 # Signal handlers for graceful shutdown
 $SIG{TERM} = sub {
     LOGINF("Received SIGTERM, shutting down...");
@@ -68,9 +73,6 @@ $SIG{HUP} = sub {
     LOGINF("Received SIGHUP, reloading configuration...");
     reload_config();
 };
-
-# Initialize logging
-my $log = LoxBerry::Log->new ( name => 'bmw-cardata-bridge' );
 
 # Main
 LOGSTART("BMW CarData Bridge");

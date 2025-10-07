@@ -39,7 +39,11 @@ unless ($config->{client_id} && $config->{client_id} ne '') {
 my $CLIENT_ID = $config->{client_id};
 
 # Initialize logging
-my $log = LoxBerry::Log->new ( name => 'oauth-poll' );
+my $log = LoxBerry::Log->new(
+    name => 'oauth-poll',
+    stderr => 1,  # Redirect STDERR to log
+    addtime => 1  # Add timestamps to log entries
+);
 LOGSTART("BMW CarData OAuth Poll");
 LOGDEB("=== BMW CarData OAuth Token Polling ===");
 

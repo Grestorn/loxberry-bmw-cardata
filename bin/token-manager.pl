@@ -36,7 +36,11 @@ GetOptions(
 ) or die "Usage: $0 [check|refresh|status] [--force]\n";
 
 # Initialize logging
-my $log = LoxBerry::Log->new ( name => 'token-manager' );
+my $log = LoxBerry::Log->new(
+    name => 'token-manager',
+    stderr => 1,  # Redirect STDERR to log
+    addtime => 1  # Add timestamps to log entries
+);
 
 # Main logic
 if ($command eq 'check') {

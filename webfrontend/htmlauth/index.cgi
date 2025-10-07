@@ -127,17 +127,15 @@ sub handle_save_config {
 }
 
 sub handle_request_device_code {
-    # Run oauth-init.pl and capture STDOUT
-    my $stdout_output = qx{$bin_dir/oauth-init.pl 2>/dev/null};
+    # Run oauth-init.pl
+    system("$bin_dir/oauth-init.pl >/dev/null 2>&1");
     my $exit_code = $? >> 8;
 
-    # Get log output from LoxBerry notifications
-    my $log_output = get_plugin_log_output('oauth-init');
-
-    # Combine both outputs (STDOUT first, then log notifications)
-    my $combined_output = "";
-    $combined_output .= $stdout_output if $stdout_output;
-    $combined_output .= "\n=== Log Details ===\n" . $log_output if $log_output;
+    # Generate log button to view results
+    my $log_button = LoxBerry::Web::logfile_button_html(
+        NAME => 'oauth-init',
+        PACKAGE => $lbpplugindir
+    );
 
     if ($exit_code == 0) {
         # Load device code response to extract verification URI
@@ -154,34 +152,32 @@ sub handle_request_device_code {
                 $template->param('OAUTH_VERIFICATION_URI' => $verification_uri);
                 $template->param('OAUTH_USER_CODE' => $user_code);
                 $template->param('OAUTH_EXPIRES_MINUTES' => int($expires_in / 60));
-                $template->param('DEVICE_CODE_OUTPUT' => $combined_output);
+                $template->param('DEVICE_CODE_LOG_BUTTON' => $log_button);
             }
         }
     } else {
         $template->param('DEVICE_CODE_ERROR' => 1);
-        $template->param('DEVICE_CODE_OUTPUT' => $combined_output);
+        $template->param('DEVICE_CODE_LOG_BUTTON' => $log_button);
     }
 }
 
 sub handle_check_oauth {
-    # Run oauth-poll.pl and capture STDOUT (for Access Token display)
-    my $stdout_output = qx{$bin_dir/oauth-poll.pl 2>/dev/null};
+    # Run oauth-poll.pl
+    system("$bin_dir/oauth-poll.pl >/dev/null 2>&1");
     my $exit_code = $? >> 8;
 
-    # Get log output from LoxBerry notifications
-    my $log_output = get_plugin_log_output('oauth-poll');
-
-    # Combine both outputs (STDOUT first, then log notifications)
-    my $combined_output = "";
-    $combined_output .= $stdout_output if $stdout_output;
-    $combined_output .= "\n=== Log Details ===\n" . $log_output if $log_output;
+    # Generate log button to view results
+    my $log_button = LoxBerry::Web::logfile_button_html(
+        NAME => 'oauth-poll',
+        PACKAGE => $lbpplugindir
+    );
 
     if ($exit_code == 0) {
         $template->param('OAUTH_POLL_SUCCESS' => 1);
-        $template->param('OAUTH_POLL_OUTPUT' => $combined_output);
+        $template->param('OAUTH_POLL_LOG_BUTTON' => $log_button);
     } else {
         $template->param('OAUTH_POLL_ERROR' => 1);
-        $template->param('OAUTH_POLL_OUTPUT' => $combined_output);
+        $template->param('OAUTH_POLL_LOG_BUTTON' => $log_button);
     }
 }
 
@@ -205,15 +201,18 @@ sub handle_refresh_token {
     system("$bin_dir/token-manager.pl refresh --force >/dev/null 2>&1");
     my $exit_code = $? >> 8;
 
-    # Get log output from LoxBerry notifications
-    my $log_output = get_plugin_log_output('token-manager');
+    # Generate log button to view results
+    my $log_button = LoxBerry::Web::logfile_button_html(
+        NAME => 'token-manager',
+        PACKAGE => $lbpplugindir
+    );
 
     if ($exit_code == 0) {
         $template->param('TOKEN_REFRESH_SUCCESS' => 1);
-        $template->param('TOKEN_REFRESH_OUTPUT' => $log_output);
+        $template->param('TOKEN_REFRESH_LOG_BUTTON' => $log_button);
     } else {
         $template->param('TOKEN_REFRESH_ERROR' => 1);
-        $template->param('TOKEN_REFRESH_OUTPUT' => $log_output);
+        $template->param('TOKEN_REFRESH_LOG_BUTTON' => $log_button);
     }
 }
 
@@ -308,11 +307,18 @@ sub prepare_template_vars {
 
     # Logs
     if ($page eq 'logs') {
-        my $bridge_log = get_plugin_log_output('bmw-cardata-bridge');
-        my $token_log = get_plugin_log_output('token-manager');
+        # Use LoxBerry::Web log buttons instead of custom log display
+        my $bridge_loglist_button = LoxBerry::Web::loglist_button_html(
+            NAME => 'bmw-cardata-bridge',
+            PACKAGE => $lbpplugindir
+        );
+        my $token_loglist_button = LoxBerry::Web::loglist_button_html(
+            NAME => 'token-manager',
+            PACKAGE => $lbpplugindir
+        );
 
-        $template->param('BRIDGE_LOG' => $bridge_log);
-        $template->param('TOKEN_LOG' => $token_log);
+        $template->param('BRIDGE_LOGLIST_BUTTON' => $bridge_loglist_button);
+        $template->param('TOKEN_LOGLIST_BUTTON' => $token_loglist_button);
     }
 }
 
@@ -427,15 +433,6 @@ sub get_bridge_status {
     return $status;
 }
 
-sub read_log {
-    my ($logfile, $lines) = @_;
-
-    return "Log file not found" unless -f $logfile;
-
-    my $output = qx{tail -n $lines "$logfile" 2>&1};
-    return $output || "Empty log file";
-}
-
 sub load_device_code {
     my $device_file = "$data_dir/device_code.json";
     return undef unless -f $device_file;
@@ -452,30 +449,3 @@ sub load_device_code {
     return eval { decode_json($json_text) };
 }
 
-sub get_plugin_log_output {
-    my ($log_name) = @_;
-
-    # Get notifications from LoxBerry::Log
-    my $notifications = LoxBerry::Log::get_notifications($lbpplugindir, $log_name);
-
-    unless ($notifications) {
-        return "No log entries found";
-    }
-
-    # Format notifications as text output
-    my $output = "";
-    foreach my $notification (@$notifications) {
-        my $timestamp = $notification->{_date} || "";
-        my $severity = $notification->{SEVERITY} || "";
-        my $message = $notification->{MESSAGE} || "";
-
-        # Format similar to how it would appear in log
-        if ($timestamp && $severity && $message) {
-            $output .= "[$timestamp] [$severity] $message\n";
-        } elsif ($message) {
-            $output .= "$message\n";
-        }
-    }
-
-    return $output || "No log output available";
-}
