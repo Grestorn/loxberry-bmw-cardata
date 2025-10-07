@@ -17,11 +17,6 @@ use POSIX qw(strftime);
 use Getopt::Long;
 use LoxBerry::Log;
 
-# Enable auto-flush for immediate log output
-$| = 1;
-STDOUT->autoflush(1);
-STDERR->autoflush(1);
-
 # Configuration
 use constant {
     BMW_MQTT_PROTOCOL => 'mqtts',  # MQTT over SSL/TLS
@@ -36,6 +31,8 @@ my $data_dir = "REPLACELBPDATADIR";
 my $log_dir = "REPLACELBPLOGDIR";
 my $tokens_file = "$data_dir/tokens.json";
 my $config_file = "$data_dir/config.json";
+
+my $log = LoxBerry::Log->new ( name => 'bmw-cardata-bridge' );
 
 # Note: CLIENT_ID is read from config file and not needed by bridge (only for OAuth operations)
 
@@ -135,7 +132,19 @@ $mqtt_cv = AnyEvent->condvar;
 
 # Run the event loop (this blocks until $mqtt_cv->send is called)
 LOGINF("Starting AnyEvent event loop...");
-$mqtt_cv->recv;
+
+# Wrap event loop in eval to catch all errors
+eval {
+    $mqtt_cv->recv;
+};
+
+# Check for errors from event loop
+if ($@) {
+    LOGCRIT("Event loop error: $@");
+    cleanup_connections();
+    LOGEND;
+    exit 2;
+}
 
 # Cleanup and exit
 cleanup_connections();
@@ -219,7 +228,15 @@ sub check_and_refresh_tokens {
 
     return unless -f $tokens_file;
 
-    my $tokens = eval { load_json($tokens_file) };
+    # Wrap file operations in eval
+    my $tokens;
+    eval {
+        $tokens = load_json($tokens_file);
+    };
+    if ($@) {
+        LOGERR("Failed to load tokens file: $@");
+        return;
+    }
     return unless $tokens;
 
     my $now = time();
@@ -232,18 +249,33 @@ sub check_and_refresh_tokens {
         # Call token-manager.pl to refresh
         my $token_manager = "$bin_dir/token-manager.pl";
         if (-x $token_manager) {
-            my $result = system($token_manager, 'check');
+            # Wrap system call in eval
+            my $result;
+            eval {
+                $result = system($token_manager, 'check');
+            };
+            if ($@) {
+                LOGERR("Error calling token-manager.pl: $@");
+                return;
+            }
+
             if ($result == 0) {
                 LOGOK("Token refresh successful");
-                # Reload tokens
-                $current_tokens = load_json($tokens_file);
+                # Reload tokens with error handling
+                eval {
+                    $current_tokens = load_json($tokens_file);
+                };
+                if ($@) {
+                    LOGERR("Failed to reload tokens after refresh: $@");
+                    return;
+                }
                 # Trigger reconnection to use new id_token
                 $connection_active = 0;
             } else {
-                LOGERR("Token refresh failed");
+                LOGERR("Token refresh failed with exit code: $result");
             }
         } else {
-            LOGERR("token-manager.pl not found or not executable");
+            LOGERR("token-manager.pl not found or not executable: $token_manager");
         }
     }
 }
@@ -322,6 +354,8 @@ sub connect_to_bmw_mqtt {
     LOGINF("ID Token (last 50 chars): ..." . substr($id_token, -50));
     LOGDEB("Full ID Token: $id_token");
 
+    # Wrap all MQTT operations in eval to catch errors
+    my $mqtt_error;
     eval {
         # Create MQTT connection with all required BMW parameters
         LOGINF("Creating MQTT connection with SSL/TLS, keepalive=30, clean_session=1...");
@@ -344,6 +378,10 @@ sub connect_to_bmw_mqtt {
                 if ($fatal) {
                     LOGCRIT("FATAL MQTT error: $message");
                     $connection_active = 0;
+                    # Store error for later handling
+                    $mqtt_error = $message;
+                    # Exit event loop on fatal error
+                    $mqtt_cv->send if $mqtt_cv;
                 } else {
                     LOGWARN("MQTT warning: $message");
                 }
@@ -360,27 +398,49 @@ sub connect_to_bmw_mqtt {
             my $topic = "$stream_username/#";
             LOGINF("Subscribing to topic: $topic");
 
-            $bmw_mqtt->subscribe(
-                topic => $topic,
-                qos => 0,
-                callback => sub {
-                    my ($topic, $message) = @_;
-                    handle_bmw_message($topic, $message);
-                }
-            );
-        } else {
-            foreach my $vin (@vins) {
-                my $topic = "$stream_username/$vin";
-                LOGINF("Subscribing to topic: $topic");
-
+            eval {
                 $bmw_mqtt->subscribe(
                     topic => $topic,
                     qos => 0,
                     callback => sub {
                         my ($topic, $message) = @_;
-                        handle_bmw_message($topic, $message);
+                        eval {
+                            handle_bmw_message($topic, $message);
+                        };
+                        if ($@) {
+                            LOGERR("Error in message handler for $topic: $@");
+                        }
                     }
                 );
+            };
+            if ($@) {
+                LOGERR("Failed to subscribe to topic $topic: $@");
+                die "Subscription failed: $@";
+            }
+        } else {
+            foreach my $vin (@vins) {
+                my $topic = "$stream_username/$vin";
+                LOGINF("Subscribing to topic: $topic");
+
+                eval {
+                    $bmw_mqtt->subscribe(
+                        topic => $topic,
+                        qos => 0,
+                        callback => sub {
+                            my ($topic, $message) = @_;
+                            eval {
+                                handle_bmw_message($topic, $message);
+                            };
+                            if ($@) {
+                                LOGERR("Error in message handler for $topic: $@");
+                            }
+                        }
+                    );
+                };
+                if ($@) {
+                    LOGERR("Failed to subscribe to topic $topic: $@");
+                    die "Subscription failed: $@";
+                }
             }
         }
 
@@ -421,9 +481,14 @@ sub forward_to_loxberry {
     # Format: "topic payload" for UDP interface
     my $udp_message = "$loxberry_topic $message";
 
+    # Wrap UDP send in eval to catch any errors
     eval {
-        $loxberry_udp_socket->send($udp_message);
-        LOGDEB("Forwarded to LoxBerry: $loxberry_topic");
+        my $result = $loxberry_udp_socket->send($udp_message);
+        unless (defined $result) {
+            LOGERR("UDP send returned undef for topic: $loxberry_topic");
+        } else {
+            LOGDEB("Forwarded to LoxBerry: $loxberry_topic");
+        }
     };
 
     if ($@) {
@@ -438,17 +503,32 @@ sub forward_to_loxberry {
 sub cleanup_connections {
     LOGINF("Cleaning up connections...");
 
+    # Disconnect from BMW MQTT with error handling
     if ($bmw_mqtt) {
-        eval { $bmw_mqtt->disconnect() };
+        eval {
+            $bmw_mqtt->disconnect();
+            LOGDEB("BMW MQTT disconnected");
+        };
+        if ($@) {
+            LOGERR("Error disconnecting from BMW MQTT: $@");
+        }
         undef $bmw_mqtt;
     }
 
+    # Close LoxBerry UDP socket with error handling
     if ($loxberry_udp_socket) {
-        eval { $loxberry_udp_socket->close() };
+        eval {
+            $loxberry_udp_socket->close();
+            LOGDEB("LoxBerry UDP socket closed");
+        };
+        if ($@) {
+            LOGERR("Error closing LoxBerry socket: $@");
+        }
         undef $loxberry_udp_socket;
     }
 
     $connection_active = 0;
+    LOGDEB("Cleanup complete");
 }
 
 #
