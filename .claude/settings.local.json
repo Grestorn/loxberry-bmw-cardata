@@ -7,7 +7,9 @@
       "Bash(do if [ ! -f \"$dir/README.md\" ])",
       "Bash(then echo \"Missing: $dir/README.md\")",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "WebSearch",
+      "WebFetch(domain:packages.debian.org)"
     ],
     "deny": [],
     "ask": []

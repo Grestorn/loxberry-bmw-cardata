@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+# Add local Perl module path
+use lib "REPLACELBPBINDIR/perl5/lib/perl5";
+
 use strict;
 use warnings;
 use AnyEvent;

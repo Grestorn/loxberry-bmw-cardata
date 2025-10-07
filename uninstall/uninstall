@@ -48,16 +48,9 @@ if [ -f "$PDATA/bridge.pid" ]; then
     rm -f "$PDATA/bridge.pid"
 fi
 
-# Optional: Clean up data directory (commented out by default - user may want to keep tokens/config)
-# Uncomment the following lines if you want to remove all data during uninstall
-# echo "BMW CarData: Cleaning up data directory..."
-# rm -f "$PDATA/tokens.json"
-# rm -f "$PDATA/config.json"
-# rm -f "$PDATA/pkce.json"
-# rm -f "$PDATA/device_code.json"
+# Note: All plugin directories (PDATA, PBIN, PCONFIG, etc.) are automatically
+# deleted by LoxBerry after this script completes. No manual cleanup needed.
 
 echo "BMW CarData: Uninstallation completed"
-echo "Note: OAuth tokens and configuration were preserved in $PDATA"
-echo "Delete manually if needed: rm -rf $PDATA"
 
 exit 0;

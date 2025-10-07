@@ -44,7 +44,43 @@ PCONFIG=$LBPCONFIG/$PDIR
 PSBIN=$LBPSBIN/$PDIR
 PBIN=$LBPBIN/$PDIR
 
-# your code goes here
+# Install required Perl modules via CPAN
+echo "<INFO> Installing required Perl modules..."
+
+# Set CPAN environment for non-interactive installation
+export PERL_MM_USE_DEFAULT=1
+export PERL_AUTOINSTALL="--defaultdeps"
+
+# Create local lib directory for plugin-specific modules in LBPBIN
+PERL5LIB_DIR="$PBIN/perl5"
+mkdir -p "$PERL5LIB_DIR"
+
+echo "<INFO> Installing AnyEvent::MQTT and dependencies..."
+
+# Check if cpanm is available, otherwise use cpan
+if command -v cpanm &> /dev/null; then
+    echo "<INFO> Using cpanm for installation..."
+    cpanm -L "$PERL5LIB_DIR" --notest --quiet AnyEvent::MQTT
+    INSTALL_RESULT=$?
+else
+    echo "<INFO> cpanm not found, using cpan..."
+    # Install to local directory using PERL5LIB
+    export PERL5LIB="$PERL5LIB_DIR/lib/perl5:$PERL5LIB"
+    export PERL_MM_OPT="INSTALL_BASE=$PERL5LIB_DIR"
+    export PERL_MB_OPT="--install_base $PERL5LIB_DIR"
+
+    cpan -i AnyEvent::MQTT
+    INSTALL_RESULT=$?
+fi
+
+# Check installation result
+if [ $INSTALL_RESULT -eq 0 ]; then
+    echo "<OK> Perl modules installed successfully!"
+else
+    echo "<WARNING> Perl module installation completed with warnings. Plugin may still work."
+fi
+
+echo "<INFO> Perl module installation complete."
 
 # Exit with Status 0
 exit 0
