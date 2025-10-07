@@ -8,6 +8,7 @@ use MIME::Base64 qw(encode_base64url);
 use Digest::SHA qw(sha256);
 use File::Path qw(make_path);
 use File::Basename;
+use LoxBerry::Log;
 
 # BMW CarData API Configuration
 use constant {
@@ -40,45 +41,50 @@ unless ($config->{client_id} && $config->{client_id} ne '') {
 
 my $CLIENT_ID = $config->{client_id};
 
-print "=== BMW CarData OAuth Initialization ===\n\n";
+# Initialize logging
+my $log = LoxBerry::Log->new ( name => 'oauth-init' );
+LOGSTART("BMW CarData OAuth Init");
+LOGDEB("=== BMW CarData OAuth Initialization ===");
 
 # Step 1: Generate PKCE code_verifier and code_challenge
-print "Step 1: Generating PKCE parameters...\n";
+LOGINF("Step 1: Generating PKCE parameters...");
 my $code_verifier = generate_code_verifier();
 my $code_challenge = generate_code_challenge($code_verifier);
-print "  ✓ Code verifier generated\n";
-print "  ✓ Code challenge generated (SHA256)\n\n";
+LOGOK("Code verifier generated");
+LOGOK("Code challenge generated (SHA256)");
 
 # Save code_verifier for later use
 my $pkce_file = "$data_dir/pkce.json";
 save_json($pkce_file, { code_verifier => $code_verifier });
-print "  ✓ PKCE data saved to $pkce_file\n\n";
+LOGOK("PKCE data saved to $pkce_file");
 
 # Step 2: Request device code
-print "Step 2: Requesting device code from BMW CarData...\n";
+LOGINF("Step 2: Requesting device code from BMW CarData...");
 my $device_response = request_device_code($code_challenge);
 
 unless ($device_response) {
-    die "Failed to request device code. Please check your CLIENT_ID and network connection.\n";
+    LOGCRIT("Failed to request device code. Please check your CLIENT_ID and network connection.");
+    LOGEND;
+    die "Failed to request device code.\n";
 }
 
-print "  ✓ Device code received successfully\n\n";
+LOGOK("Device code received successfully");
 
 # Display response details
-print "=== Device Authorization Response ===\n";
-print "User Code:          $device_response->{user_code}\n";
-print "Device Code:        $device_response->{device_code}\n";
-print "Verification URI:   $device_response->{verification_uri}\n";
-print "Expires in:         $device_response->{expires_in} seconds\n";
-print "Polling interval:   $device_response->{interval} seconds\n\n";
+LOGDEB("=== Device Authorization Response ===");
+LOGDEB("User Code:          $device_response->{user_code}");
+LOGDEB("Device Code:        $device_response->{device_code}");
+LOGDEB("Verification URI:   $device_response->{verification_uri}");
+LOGDEB("Expires in:         $device_response->{expires_in} seconds");
+LOGDEB("Polling interval:   $device_response->{interval} seconds");
 
 # Save device response for token polling
 my $device_file = "$data_dir/device_code.json";
 save_json($device_file, $device_response);
-print "  ✓ Device code data saved to $device_file\n\n";
+LOGOK("Device code data saved to $device_file");
 
 # Step 3: Display verification URI (do NOT open browser automatically)
-print "=== Authorization Required ===\n";
+LOGINF("=== Authorization Required ===");
 if (exists $device_response->{verification_uri_complete}) {
     print "Verification URL (with pre-filled code):\n";
     print "  $device_response->{verification_uri_complete}\n\n";
@@ -94,6 +100,8 @@ print "1. Click the verification link shown in the web interface\n";
 print "2. Log in with your BMW ID credentials\n";
 print "3. Approve the authorization request\n";
 print "4. Return to web interface and click 'Retrieve Tokens'\n\n";
+
+LOGEND;
 
 exit 0;
 
@@ -157,15 +165,15 @@ sub request_device_code {
     });
 
     unless ($response->is_success) {
-        warn "HTTP Error: " . $response->status_line . "\n";
-        warn "Response: " . $response->decoded_content . "\n";
+        LOGERR("HTTP Error: " . $response->status_line);
+        LOGERR("Response: " . $response->decoded_content);
         return undef;
     }
 
     my $data = eval { decode_json($response->decoded_content) };
     if ($@) {
-        warn "JSON decode error: $@\n";
-        warn "Response: " . $response->decoded_content . "\n";
+        LOGERR("JSON decode error: $@");
+        LOGERR("Response: " . $response->decoded_content);
         return undef;
     }
 

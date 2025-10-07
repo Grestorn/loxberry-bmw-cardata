@@ -6,6 +6,7 @@ use LWP::UserAgent;
 use JSON;
 use File::Basename;
 use Getopt::Long;
+use LoxBerry::Log;
 
 # BMW CarData API Configuration
 use constant {
@@ -28,13 +29,14 @@ if (-f $config_file) {
 
 # Command line options
 my $command = $ARGV[0] || 'check';
-my $verbose = 0;
 my $force = 0;
 
 GetOptions(
-    'verbose|v' => \$verbose,
     'force|f' => \$force,
-) or die "Usage: $0 [check|refresh|status] [--verbose] [--force]\n";
+) or die "Usage: $0 [check|refresh|status] [--force]\n";
+
+# Initialize logging
+my $log = LoxBerry::Log->new ( name => 'token-manager' );
 
 # Main logic
 if ($command eq 'check') {
@@ -44,7 +46,7 @@ if ($command eq 'check') {
 } elsif ($command eq 'status') {
     exit show_status();
 } else {
-    die "Unknown command: $command\nUsage: $0 [check|refresh|status] [--verbose] [--force]\n";
+    die "Unknown command: $command\nUsage: $0 [check|refresh|status] [--force]\n";
 }
 
 #
@@ -53,10 +55,12 @@ if ($command eq 'check') {
 
 # Check if tokens need refresh and refresh if necessary
 sub check_and_refresh {
-    log_message("Checking token status...");
+    LOGSTART("BMW Token Check");
+    LOGINF("Checking token status...");
 
     unless (-f $tokens_file) {
-        log_message("ERROR: No tokens found. Please run oauth-init.pl and oauth-poll.pl first.");
+        LOGERR("No tokens found. Please run oauth-init.pl and oauth-poll.pl first.");
+        LOGEND;
         return 1;
     }
 
@@ -65,7 +69,8 @@ sub check_and_refresh {
 
     # Check if refresh token is expired
     if (exists $tokens->{refresh_expires_at} && $tokens->{refresh_expires_at} < $now) {
-        log_message("ERROR: Refresh token has expired. Please re-authenticate using oauth-init.pl.");
+        LOGCRIT("Refresh token has expired. Please re-authenticate using oauth-init.pl.");
+        LOGEND;
         return 1;
     }
 
@@ -74,12 +79,15 @@ sub check_and_refresh {
     my $needs_refresh = ($expires_at - $now) < REFRESH_MARGIN;
 
     if ($needs_refresh || $force) {
-        log_message("Tokens need refresh. Refreshing now...");
-        return refresh_tokens($force);
+        LOGINF("Tokens need refresh. Refreshing now...");
+        my $result = refresh_tokens($force);
+        LOGEND;
+        return $result;
     } else {
         my $time_left = $expires_at - $now;
         my $minutes_left = int($time_left / 60);
-        log_message("Tokens are valid. Expires in $minutes_left minutes.");
+        LOGOK("Tokens are valid. Expires in $minutes_left minutes.");
+        LOGEND;
         return 0;
     }
 }
@@ -88,17 +96,20 @@ sub check_and_refresh {
 sub refresh_tokens {
     my ($force_refresh) = @_;
 
-    log_message("Starting token refresh...");
+    LOGSTART("BMW Token Refresh") unless $force_refresh;  # Don't double-start if called from check_and_refresh
+    LOGINF("Starting token refresh...");
 
     unless (-f $tokens_file) {
-        log_message("ERROR: No tokens found. Please run oauth-init.pl and oauth-poll.pl first.");
+        LOGERR("No tokens found. Please run oauth-init.pl and oauth-poll.pl first.");
+        LOGEND unless $force_refresh;
         return 1;
     }
 
     my $old_tokens = load_json($tokens_file);
 
     unless (exists $old_tokens->{refresh_token}) {
-        log_message("ERROR: No refresh token found in tokens file.");
+        LOGERR("No refresh token found in tokens file.");
+        LOGEND unless $force_refresh;
         return 1;
     }
 
@@ -107,7 +118,8 @@ sub refresh_tokens {
     # Check if refresh token is still valid
     my $now = time();
     if (exists $old_tokens->{refresh_expires_at} && $old_tokens->{refresh_expires_at} < $now) {
-        log_message("ERROR: Refresh token has expired. Please re-authenticate using oauth-init.pl.");
+        LOGCRIT("Refresh token has expired. Please re-authenticate using oauth-init.pl.");
+        LOGEND unless $force_refresh;
         return 1;
     }
 
@@ -118,32 +130,36 @@ sub refresh_tokens {
 
         if ($time_left > REFRESH_MARGIN) {
             my $minutes_left = int($time_left / 60);
-            log_message("Tokens are still valid for $minutes_left minutes. Use --force to refresh anyway.");
+            LOGINF("Tokens are still valid for $minutes_left minutes. Use --force to refresh anyway.");
+            LOGEND unless $force_refresh;
             return 0;
         }
     }
 
     # Call BMW CarData API to refresh tokens
-    log_message("Requesting new tokens from BMW CarData API...");
+    LOGINF("Requesting new tokens from BMW CarData API...");
     my $new_tokens = request_token_refresh($refresh_token);
 
     unless ($new_tokens) {
-        log_message("ERROR: Failed to refresh tokens. API request failed.");
+        LOGERR("Failed to refresh tokens. API request failed.");
+        LOGEND unless $force_refresh;
         return 1;
     }
 
     # Check for errors
     if (exists $new_tokens->{error}) {
-        log_message("ERROR: Token refresh failed: $new_tokens->{error}");
+        LOGERR("Token refresh failed: $new_tokens->{error}");
         if (exists $new_tokens->{error_description}) {
-            log_message("  Description: $new_tokens->{error_description}");
+            LOGERR("Description: $new_tokens->{error_description}");
         }
+        LOGEND unless $force_refresh;
         return 1;
     }
 
     # Verify we got new tokens
     unless (exists $new_tokens->{access_token} && exists $new_tokens->{id_token} && exists $new_tokens->{refresh_token}) {
-        log_message("ERROR: Invalid response from API. Missing required tokens.");
+        LOGERR("Invalid response from API. Missing required tokens.");
+        LOGEND unless $force_refresh;
         return 1;
     }
 
@@ -159,15 +175,14 @@ sub refresh_tokens {
 
     # Save new tokens
     save_json($tokens_file, $new_tokens);
-    log_message("SUCCESS: Tokens refreshed successfully.");
+    LOGOK("Tokens refreshed successfully.");
 
-    if ($verbose) {
-        my $expires_at_str = localtime($new_tokens->{expires_at});
-        my $refresh_expires_str = localtime($new_tokens->{refresh_expires_at});
-        log_message("  New tokens expire at: $expires_at_str");
-        log_message("  Refresh token valid until: $refresh_expires_str");
-    }
+    my $expires_at_str = localtime($new_tokens->{expires_at});
+    my $refresh_expires_str = localtime($new_tokens->{refresh_expires_at});
+    LOGDEB("New tokens expire at: $expires_at_str");
+    LOGDEB("Refresh token valid until: $refresh_expires_str");
 
+    LOGEND unless $force_refresh;
     return 0;
 }
 
@@ -273,19 +288,15 @@ sub request_token_refresh {
     });
 
     unless ($response->is_success) {
-        log_message("HTTP Error: " . $response->status_line);
-        if ($verbose) {
-            log_message("Response: " . $response->decoded_content);
-        }
+        LOGERR("HTTP Error: " . $response->status_line);
+        LOGDEB("Response: " . $response->decoded_content);
         return undef;
     }
 
     my $data = eval { decode_json($response->decoded_content) };
     if ($@) {
-        log_message("JSON decode error: $@");
-        if ($verbose) {
-            log_message("Response: " . $response->decoded_content);
-        }
+        LOGERR("JSON decode error: $@");
+        LOGDEB("Response: " . $response->decoded_content);
         return undef;
     }
 
@@ -323,11 +334,4 @@ sub save_json {
 
     # Set appropriate permissions
     chmod(0600, $filename);
-}
-
-# Log message with timestamp
-sub log_message {
-    my ($message) = @_;
-    my $timestamp = localtime();
-    print "[$timestamp] $message\n";
 }
