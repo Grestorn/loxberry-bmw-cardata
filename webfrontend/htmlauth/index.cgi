@@ -315,7 +315,7 @@ sub prepare_template_vars {
             NAME => 'bmw-cardata-bridge',
             PACKAGE => $lbpplugindir
         );
-        $template->param('BRIDGE_LOGLIST_URL' => $bridge_loglist_html);
+        $template->param('BRIDGE_LOGLIST_HTML' => $bridge_loglist_html);
     }
     elsif ($page eq 'token_logs') {
         # Token manager logs page
@@ -323,7 +323,7 @@ sub prepare_template_vars {
             NAME => 'token-manager',
             PACKAGE => $lbpplugindir
         );
-        $template->param('TOKEN_LOGLIST_URL' => $token_loglist_html);
+        $template->param('TOKEN_LOGLIST_HTML' => $token_loglist_html);
     }
 }
 

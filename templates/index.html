@@ -357,21 +357,13 @@
 <!-- Bridge Logs Page -->
 <TMPL_IF PAGE_BRIDGE_LOGS>
 
-<div class="ui-widget" style="margin-bottom: 20px;">
-    <div class="ui-widget-content ui-corner-all" style="padding: 0;">
-        <iframe src="<TMPL_VAR BRIDGE_LOGLIST_URL>" style="width: 100%; min-height: 600px; border: none;"></iframe>
-    </div>
-</div>
+<TMPL_VAR BRIDGE_LOGLIST_HTML>
 
 </TMPL_IF>
 
 <!-- Token Manager Logs Page -->
 <TMPL_IF PAGE_TOKEN_LOGS>
 
-<div class="ui-widget" style="margin-bottom: 20px;">
-    <div class="ui-widget-content ui-corner-all" style="padding: 0;">
-        <iframe src="<TMPL_VAR TOKEN_LOGLIST_URL>" style="width: 100%; min-height: 600px; border: none;"></iframe>
-    </div>
-</div>
+<TMPL_VAR TOKEN_LOGLIST_HTML>
 
 </TMPL_IF>
