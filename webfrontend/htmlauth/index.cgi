@@ -111,14 +111,17 @@ sub handle_save_config {
     # Check if client_id changed and is not empty
     my $new_client_id = $new_config->{client_id};
     if ($new_client_id && $new_client_id ne '' && $new_client_id ne $old_client_id) {
-        # Client ID changed - reset OAuth state
-        # Delete existing tokens and OAuth temporary files
-        unlink($tokens_file) if -f $tokens_file;
-        unlink("$data_dir/pkce.json") if -f "$data_dir/pkce.json";
-        unlink("$data_dir/device_code.json") if -f "$data_dir/device_code.json";
+        # Only show message if there was a previous client_id (not first time entry)
+        if ($old_client_id && $old_client_id ne '') {
+            # Client ID changed - reset OAuth state
+            # Delete existing tokens and OAuth temporary files
+            unlink($tokens_file) if -f $tokens_file;
+            unlink("$data_dir/pkce.json") if -f "$data_dir/pkce.json";
+            unlink("$data_dir/device_code.json") if -f "$data_dir/device_code.json";
 
-        $template->param('CLIENT_ID_CHANGED' => 1);
-        $template->param('CLIENT_ID_CHANGE_MESSAGE' => $L{'STATUS.CLIENT_ID_CHANGED_INFO'});
+            $template->param('CLIENT_ID_CHANGED' => 1);
+            $template->param('CLIENT_ID_CHANGE_MESSAGE' => $L{'STATUS.CLIENT_ID_CHANGED_INFO'});
+        }
     }
 }
 
@@ -233,6 +236,11 @@ sub prepare_template_vars {
         # Show current access token for manual API testing
         if (exists $tokens->{access_token}) {
             $template->param('ACCESS_TOKEN' => $tokens->{access_token});
+        }
+
+        # Show current ID token for MQTT authentication
+        if (exists $tokens->{id_token}) {
+            $template->param('ID_TOKEN' => $tokens->{id_token});
         }
 
         if ($token_valid) {

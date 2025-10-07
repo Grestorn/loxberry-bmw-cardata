@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 use Net::MQTT::Simple;
+use IO::Socket::SSL;
 use LWP::UserAgent;
 use JSON;
 use IO::Socket::INET;
@@ -296,11 +297,27 @@ sub connect_to_bmw_mqtt {
         return 0;
     }
 
+    unless ($id_token) {
+        log_msg("ERROR", "Missing ID token - cannot authenticate to BMW MQTT");
+        return 0;
+    }
+
     my $broker_url = BMW_MQTT_PROTOCOL . "://$host:$port";
-    log_msg("INFO", "Connecting to $broker_url as user $stream_username");
+    log_msg("INFO", "Connecting to $broker_url");
+    log_msg("INFO", "MQTT Username: $stream_username");
+    log_msg("INFO", "ID Token (first 50 chars): " . substr($id_token, 0, 50) . "...");
+    log_msg("INFO", "ID Token (last 50 chars): ..." . substr($id_token, -50));
+    log_msg("DEBUG", "Full ID Token: $id_token") if $debug;
 
     eval {
+        # Set up SSL/TLS options for secure connection
+        $ENV{MQTT_SIMPLE_SSL_VERIFY_HOSTNAME} = 1;
+
+        # Create MQTT connection with SSL/TLS
+        log_msg("INFO", "Creating MQTT connection with SSL/TLS...");
         $bmw_mqtt = Net::MQTT::Simple->new($broker_url);
+
+        log_msg("INFO", "MQTT connection object created, attempting login...");
 
         # Authenticate with stream_username as username and ID token as password
         $bmw_mqtt->login($stream_username, $id_token);

@@ -50,7 +50,7 @@
     </div>
 
     <details style="margin-top: 15px;">
-        <summary style="cursor: pointer; color: #0066cc;"><TMPL_VAR OAUTH.SHOW_TECHNICAL_DETAILS></summary>
+        <summary style="cursor: pointer; color: #0066cc;"><TMPL_VAR OAUTH."SHOW_TECHNICAL_DETAILS></summary>
         <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px; overflow: auto;"><TMPL_VAR DEVICE_CODE_OUTPUT></pre>
     </details>
 </div>
@@ -72,7 +72,11 @@
         <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em;"></span>
         <TMPL_VAR STATUS.OAUTH_SUCCESS>
     </h3>
-    <pre style="margin: 0; background: #fff; padding: 10px; border: 1px solid #4caf50; border-radius: 3px; overflow: auto;"><TMPL_VAR OAUTH_POLL_OUTPUT></pre>
+
+    <details style="margin-top: 10px;">
+        <summary style="cursor: pointer; color: #0066cc;"><TMPL_VAR OAUTH.SHOW_TECHNICAL_DETAILS></summary>
+        <pre style="margin: 10px 0 0 0; background: #fff; padding: 10px; border: 1px solid #4caf50; border-radius: 3px; overflow: auto;"><TMPL_VAR OAUTH_POLL_OUTPUT></pre>
+    </details>
 </div>
 </TMPL_IF>
 
@@ -92,7 +96,11 @@
         <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em;"></span>
         <TMPL_VAR STATUS.TOKEN_REFRESH_SUCCESS>
     </h3>
-    <pre style="margin: 0; background: #fff; padding: 10px; border: 1px solid #4caf50; border-radius: 3px; overflow: auto;"><TMPL_VAR TOKEN_REFRESH_OUTPUT></pre>
+
+    <details style="margin-top: 10px;">
+        <summary style="cursor: pointer; color: #0066cc;"><TMPL_VAR OAUTH.SHOW_TECHNICAL_DETAILS></summary>
+        <pre style="margin: 10px 0 0 0; background: #fff; padding: 10px; border: 1px solid #4caf50; border-radius: 3px; overflow: auto;"><TMPL_VAR TOKEN_REFRESH_OUTPUT></pre>
+    </details>
 </div>
 </TMPL_IF>
 
@@ -131,6 +139,13 @@
             <p><TMPL_VAR STATUS.CURRENT_ACCESS_TOKEN>: <strong style="font-family: monospace; word-break: break-all;"><TMPL_VAR ACCESS_TOKEN></strong></p>
             </TMPL_IF>
 
+            <TMPL_IF ID_TOKEN>
+            <div style="margin: 15px 0;">
+                <p style="margin: 0 0 5px 0;"><strong><TMPL_VAR STATUS.CURRENT_ID_TOKEN>:</strong></p>
+                <textarea readonly style="width: 100%; max-width: 700px; height: 100px; font-family: monospace; font-size: 11px; resize: vertical;"><TMPL_VAR ID_TOKEN></textarea>
+            </div>
+            </TMPL_IF>
+
             <p><TMPL_VAR STATUS.TOKEN_EXPIRES>: <strong><TMPL_VAR TOKEN_EXPIRES_MINUTES></strong> <TMPL_VAR STATUS.MINUTES></p>
             <p><TMPL_VAR STATUS.REFRESH_VALID>: <strong><TMPL_VAR REFRESH_EXPIRES_DAYS></strong> <TMPL_VAR STATUS.DAYS></p>
 
@@ -155,10 +170,18 @@
 
             <TMPL_IF ACCESS_TOKEN>
             <p><TMPL_VAR STATUS.CURRENT_ACCESS_TOKEN>: <strong style="font-family: monospace; word-break: break-all;"><TMPL_VAR ACCESS_TOKEN></strong></p>
+            </TMPL_IF>
+
+            <TMPL_IF ID_TOKEN>
+            <div style="margin: 15px 0;">
+                <p style="margin: 0 0 5px 0;"><strong><TMPL_VAR STATUS.CURRENT_ID_TOKEN>:</strong></p>
+                <textarea readonly style="width: 100%; max-width: 700px; height: 100px; font-family: monospace; font-size: 11px; resize: vertical;"><TMPL_VAR ID_TOKEN></textarea>
+            </div>
+            </TMPL_IF>
+
             <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #ff6600;">
                 <TMPL_VAR STATUS.TOKEN_EXPIRED_HINT>
             </p>
-            </TMPL_IF>
 
             <TMPL_IF REFRESH_EXPIRED>
                 <p style="color: red;"><TMPL_VAR STATUS.REFRESH_EXPIRED></p>
