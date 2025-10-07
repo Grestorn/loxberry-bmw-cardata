@@ -455,7 +455,7 @@ sub get_plugin_log_output {
     my ($log_name) = @_;
 
     # Get notifications from LoxBerry::Log
-    my $notifications = LoxBerry::Log::get_notifications($log_name);
+    my $notifications = get_notifications($lbpplugindir, $log_name);
 
     unless ($notifications) {
         return "No log entries found";
@@ -478,4 +478,3 @@ sub get_plugin_log_output {
 
     return $output || "No log output available";
 }
-
