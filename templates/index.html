@@ -126,10 +126,17 @@
             <p><TMPL_VAR STATUS.TOKEN_EXPIRES>: <strong><TMPL_VAR TOKEN_EXPIRES_MINUTES></strong> <TMPL_VAR STATUS.MINUTES></p>
             <p><TMPL_VAR STATUS.REFRESH_VALID>: <strong><TMPL_VAR REFRESH_EXPIRES_DAYS></strong> <TMPL_VAR STATUS.DAYS></p>
 
-            <form method="post" action="index.cgi" style="margin-top: 10px;">
+            <form method="post" action="index.cgi" style="margin-top: 10px; display: inline-block; margin-right: 10px;">
                 <input type="hidden" name="action" value="refresh_token">
                 <button type="submit" class="ui-button ui-widget ui-corner-all">
                     <TMPL_VAR STATUS.REFRESH_TOKEN_BUTTON>
+                </button>
+            </form>
+
+            <form method="post" action="index.cgi" style="margin-top: 10px; display: inline-block;">
+                <input type="hidden" name="action" value="request_device_code">
+                <button type="submit" class="ui-button ui-widget ui-corner-all">
+                    <TMPL_VAR OAUTH.RESTART_AUTH_BUTTON>
                 </button>
             </form>
         </TMPL_IF>
@@ -140,13 +147,10 @@
             <p><TMPL_VAR STATUS.USER_ID>: <strong><TMPL_VAR GCID></strong></p>
 
             <TMPL_IF ACCESS_TOKEN>
-            <div style="margin: 15px 0; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 3px;">
-                <p style="margin: 0 0 5px 0;"><strong><TMPL_VAR STATUS.CURRENT_ACCESS_TOKEN>:</strong></p>
-                <textarea readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 11px; resize: vertical;"><TMPL_VAR ACCESS_TOKEN></textarea>
+                <p><TMPL_VAR STATUS.CURRENT_ACCESS_TOKEN>: <strong><TMPL_VAR ACCESS_TOKEN></strong></p>
                 <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #ff6600;">
                     <TMPL_VAR STATUS.TOKEN_EXPIRED_HINT>
                 </p>
-            </div>
             </TMPL_IF>
 
             <TMPL_IF REFRESH_EXPIRED>
@@ -155,10 +159,17 @@
                 <p><TMPL_VAR STATUS.REFRESH_VALID>: <strong><TMPL_VAR REFRESH_EXPIRES_DAYS></strong> <TMPL_VAR STATUS.DAYS></p>
                 <p><TMPL_VAR STATUS.AUTO_REFRESH_INFO></p>
 
-                <form method="post" action="index.cgi" style="margin-top: 10px;">
+                <form method="post" action="index.cgi" style="margin-top: 10px; display: inline-block; margin-right: 10px;">
                     <input type="hidden" name="action" value="refresh_token">
                     <button type="submit" class="ui-button ui-widget ui-corner-all">
                         <TMPL_VAR STATUS.REFRESH_TOKEN_BUTTON>
+                    </button>
+                </form>
+
+                <form method="post" action="index.cgi" style="margin-top: 10px; display: inline-block;">
+                    <input type="hidden" name="action" value="request_device_code">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all">
+                        <TMPL_VAR OAUTH.RESTART_AUTH_BUTTON>
                     </button>
                 </form>
             </TMPL_IF>
@@ -223,33 +234,45 @@
 
     <div class="ui-widget" style="margin-bottom: 20px;">
         <div class="ui-widget-content ui-corner-all" style="padding: 15px;">
-            <p><label for="client_id"><strong><TMPL_VAR CONFIG.CLIENT_ID>:</strong></label>
-            <br><small><TMPL_VAR CONFIG.CLIENT_ID_HELP></small></p>
-            <input type="text" id="client_id" name="client_id" value="<TMPL_VAR CLIENT_ID>"
-                   style="width: 100%; max-width: 500px;" required>
+            <div style="margin-bottom: 20px;">
+                <label for="client_id"><strong><TMPL_VAR CONFIG.CLIENT_ID>:</strong></label>
+                <input type="text" id="client_id" name="client_id" value="<TMPL_VAR CLIENT_ID>"
+                       style="width: 100%; max-width: 500px; margin-top: 5px;" required>
+                <p style="margin: 5px 0 0 0;"><small><TMPL_VAR CONFIG.CLIENT_ID_HELP></small></p>
+            </div>
 
-            <p style="margin-top: 15px;"><label for="stream_host"><strong><TMPL_VAR CONFIG.STREAM_HOST>:</strong></label>
-            <br><small><TMPL_VAR CONFIG.STREAM_HOST_HELP></small></p>
-            <input type="text" id="stream_host" name="stream_host" value="<TMPL_VAR STREAM_HOST>"
-                   style="width: 100%; max-width: 500px;" required>
+            <div style="margin-bottom: 20px;">
+                <label for="stream_host"><strong><TMPL_VAR CONFIG.STREAM_HOST>:</strong></label>
+                <input type="text" id="stream_host" name="stream_host" value="<TMPL_VAR STREAM_HOST>"
+                       style="width: 100%; max-width: 500px; margin-top: 5px;" required>
+                <p style="margin: 5px 0 0 0;"><small><TMPL_VAR CONFIG.STREAM_HOST_HELP></small></p>
+            </div>
 
-            <p style="margin-top: 15px;"><label for="stream_port"><strong><TMPL_VAR CONFIG.STREAM_PORT>:</strong></label></p>
-            <input type="number" id="stream_port" name="stream_port" value="<TMPL_VAR STREAM_PORT>"
-                   min="1" max="65535" required>
+            <div style="margin-bottom: 20px;">
+                <label for="stream_port"><strong><TMPL_VAR CONFIG.STREAM_PORT>:</strong></label>
+                <input type="number" id="stream_port" name="stream_port" value="<TMPL_VAR STREAM_PORT>"
+                       min="1" max="65535" style="margin-top: 5px;" required>
+            </div>
 
-            <p style="margin-top: 15px;"><label for="stream_username"><strong><TMPL_VAR CONFIG.STREAM_USERNAME>:</strong></label>
-            <br><small><TMPL_VAR CONFIG.STREAM_USERNAME_HELP></small></p>
-            <input type="text" id="stream_username" name="stream_username" value="<TMPL_VAR STREAM_USERNAME>"
-                   style="width: 100%; max-width: 500px;" required>
+            <div style="margin-bottom: 20px;">
+                <label for="stream_username"><strong><TMPL_VAR CONFIG.STREAM_USERNAME>:</strong></label>
+                <input type="text" id="stream_username" name="stream_username" value="<TMPL_VAR STREAM_USERNAME>"
+                       style="width: 100%; max-width: 500px; margin-top: 5px;" required>
+                <p style="margin: 5px 0 0 0;"><small><TMPL_VAR CONFIG.STREAM_USERNAME_HELP></small></p>
+            </div>
 
-            <p style="margin-top: 15px;"><label for="vins"><strong><TMPL_VAR CONFIG.VINS>:</strong></label>
-            <br><small><TMPL_VAR CONFIG.VINS_HELP></small></p>
-            <textarea id="vins" name="vins" rows="4" style="width: 100%; max-width: 500px;"><TMPL_VAR VINS></textarea>
+            <div style="margin-bottom: 20px;">
+                <label for="vins"><strong><TMPL_VAR CONFIG.VINS>:</strong></label>
+                <textarea id="vins" name="vins" rows="4" style="width: 100%; max-width: 500px; margin-top: 5px;"><TMPL_VAR VINS></textarea>
+                <p style="margin: 5px 0 0 0;"><small><TMPL_VAR CONFIG.VINS_HELP></small></p>
+            </div>
 
-            <p style="margin-top: 15px;"><label for="mqtt_topic_prefix"><strong><TMPL_VAR CONFIG.MQTT_PREFIX>:</strong></label>
-            <br><small><TMPL_VAR CONFIG.MQTT_PREFIX_HELP></small></p>
-            <input type="text" id="mqtt_topic_prefix" name="mqtt_topic_prefix" value="<TMPL_VAR MQTT_TOPIC_PREFIX>"
-                   style="width: 100%; max-width: 300px;" required>
+            <div style="margin-bottom: 20px;">
+                <label for="mqtt_topic_prefix"><strong><TMPL_VAR CONFIG.MQTT_PREFIX>:</strong></label>
+                <input type="text" id="mqtt_topic_prefix" name="mqtt_topic_prefix" value="<TMPL_VAR MQTT_TOPIC_PREFIX>"
+                       style="width: 100%; max-width: 300px; margin-top: 5px;" required>
+                <p style="margin: 5px 0 0 0;"><small><TMPL_VAR CONFIG.MQTT_PREFIX_HELP></small></p>
+            </div>
 
             <p style="margin-top: 20px;">
                 <button type="submit" class="ui-button ui-widget ui-corner-all">

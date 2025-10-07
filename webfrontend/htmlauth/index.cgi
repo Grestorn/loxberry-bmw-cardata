@@ -84,6 +84,10 @@ exit;
 #
 
 sub handle_save_config {
+    # Load old config to check if client_id changed
+    my $old_config = load_config();
+    my $old_client_id = $old_config ? ($old_config->{client_id} || '') : '';
+
     my $new_config = {
         client_id => $cgi->param('client_id') || '',
         stream_host => $cgi->param('stream_host') || '',
@@ -103,6 +107,14 @@ sub handle_save_config {
 
     $template->param('SAVE_SUCCESS' => 1);
     $template->param('SAVE_MESSAGE' => $L{'CONFIG.SAVED'});
+
+    # Check if client_id changed and is not empty
+    my $new_client_id = $new_config->{client_id};
+    if ($new_client_id && $new_client_id ne '' && $new_client_id ne $old_client_id) {
+        # Client ID changed - automatically start OAuth initialization
+        $template->param('CLIENT_ID_CHANGED' => 1);
+        handle_request_device_code();
+    }
 }
 
 sub handle_request_device_code {
