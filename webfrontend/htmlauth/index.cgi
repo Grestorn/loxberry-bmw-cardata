@@ -126,9 +126,17 @@ sub handle_save_config {
 }
 
 sub handle_request_device_code {
-    # Run oauth-init.pl
-    my $output = qx{$bin_dir/oauth-init.pl 2>&1};
+    # Run oauth-init.pl and capture STDOUT
+    my $stdout_output = qx{$bin_dir/oauth-init.pl 2>/dev/null};
     my $exit_code = $? >> 8;
+
+    # Get log output from LoxBerry notifications
+    my $log_output = get_plugin_log_output('oauth-init');
+
+    # Combine both outputs (STDOUT first, then log notifications)
+    my $combined_output = "";
+    $combined_output .= $stdout_output if $stdout_output;
+    $combined_output .= "\n=== Log Details ===\n" . $log_output if $log_output;
 
     if ($exit_code == 0) {
         # Load device code response to extract verification URI
@@ -145,26 +153,34 @@ sub handle_request_device_code {
                 $template->param('OAUTH_VERIFICATION_URI' => $verification_uri);
                 $template->param('OAUTH_USER_CODE' => $user_code);
                 $template->param('OAUTH_EXPIRES_MINUTES' => int($expires_in / 60));
-                $template->param('DEVICE_CODE_OUTPUT' => $output);
+                $template->param('DEVICE_CODE_OUTPUT' => $combined_output);
             }
         }
     } else {
         $template->param('DEVICE_CODE_ERROR' => 1);
-        $template->param('DEVICE_CODE_OUTPUT' => $output);
+        $template->param('DEVICE_CODE_OUTPUT' => $combined_output);
     }
 }
 
 sub handle_check_oauth {
-    # Run oauth-poll.pl
-    my $output = qx{$bin_dir/oauth-poll.pl 2>&1};
+    # Run oauth-poll.pl and capture STDOUT (for Access Token display)
+    my $stdout_output = qx{$bin_dir/oauth-poll.pl 2>/dev/null};
     my $exit_code = $? >> 8;
+
+    # Get log output from LoxBerry notifications
+    my $log_output = get_plugin_log_output('oauth-poll');
+
+    # Combine both outputs (STDOUT first, then log notifications)
+    my $combined_output = "";
+    $combined_output .= $stdout_output if $stdout_output;
+    $combined_output .= "\n=== Log Details ===\n" . $log_output if $log_output;
 
     if ($exit_code == 0) {
         $template->param('OAUTH_POLL_SUCCESS' => 1);
-        $template->param('OAUTH_POLL_OUTPUT' => $output);
+        $template->param('OAUTH_POLL_OUTPUT' => $combined_output);
     } else {
         $template->param('OAUTH_POLL_ERROR' => 1);
-        $template->param('OAUTH_POLL_OUTPUT' => $output);
+        $template->param('OAUTH_POLL_OUTPUT' => $combined_output);
     }
 }
 
@@ -185,15 +201,18 @@ sub handle_restart_bridge {
 
 sub handle_refresh_token {
     # Run token-manager.pl refresh --force
-    my $output = qx{$bin_dir/token-manager.pl refresh --force 2>&1};
+    system("$bin_dir/token-manager.pl refresh --force >/dev/null 2>&1");
     my $exit_code = $? >> 8;
+
+    # Get log output from LoxBerry notifications
+    my $log_output = get_plugin_log_output('token-manager');
 
     if ($exit_code == 0) {
         $template->param('TOKEN_REFRESH_SUCCESS' => 1);
-        $template->param('TOKEN_REFRESH_OUTPUT' => $output);
+        $template->param('TOKEN_REFRESH_OUTPUT' => $log_output);
     } else {
         $template->param('TOKEN_REFRESH_ERROR' => 1);
-        $template->param('TOKEN_REFRESH_OUTPUT' => $output);
+        $template->param('TOKEN_REFRESH_OUTPUT' => $log_output);
     }
 }
 
@@ -288,8 +307,8 @@ sub prepare_template_vars {
 
     # Logs
     if ($page eq 'logs') {
-        my $bridge_log = read_log("$lbplogdir/bridge.log", 50);
-        my $token_log = read_log("$lbplogdir/token-refresh.log", 50);
+        my $bridge_log = get_plugin_log_output('bmw-cardata-bridge');
+        my $token_log = get_plugin_log_output('token-manager');
 
         $template->param('BRIDGE_LOG' => $bridge_log);
         $template->param('TOKEN_LOG' => $token_log);
@@ -430,5 +449,33 @@ sub load_device_code {
     }
 
     return eval { decode_json($json_text) };
+}
+
+sub get_plugin_log_output {
+    my ($log_name) = @_;
+
+    # Get notifications from LoxBerry::Log
+    my $notifications = LoxBerry::Log::get_notifications($log_name);
+
+    unless ($notifications) {
+        return "No log entries found";
+    }
+
+    # Format notifications as text output
+    my $output = "";
+    foreach my $notification (@$notifications) {
+        my $timestamp = $notification->{_date} || "";
+        my $severity = $notification->{SEVERITY} || "";
+        my $message = $notification->{MESSAGE} || "";
+
+        # Format similar to how it would appear in log
+        if ($timestamp && $severity && $message) {
+            $output .= "[$timestamp] [$severity] $message\n";
+        } elsif ($message) {
+            $output .= "$message\n";
+        }
+    }
+
+    return $output || "No log output available";
 }
 
