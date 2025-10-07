@@ -56,26 +56,27 @@ PERL5LIB_DIR="$PBIN/perl5"
 mkdir -p "$PERL5LIB_DIR"
 
 echo "<INFO> Installing AnyEvent::MQTT and dependencies..."
+echo "<INFO> Using cpanm for installation (skipping tests, docs, and man pages)..."
 
-# Check if cpanm is available, otherwise use cpan
-if command -v cpanm &> /dev/null; then
-    echo "<INFO> Using cpanm for installation..."
-    cpanm -L "$PERL5LIB_DIR" --notest --quiet AnyEvent::MQTT
-    INSTALL_RESULT=$?
-else
-    echo "<INFO> cpanm not found, using cpan..."
-    # Install to local directory using PERL5LIB
-    export PERL5LIB="$PERL5LIB_DIR/lib/perl5:$PERL5LIB"
-    export PERL_MM_OPT="INSTALL_BASE=$PERL5LIB_DIR"
-    export PERL_MB_OPT="--install_base $PERL5LIB_DIR"
-
-    cpan -i AnyEvent::MQTT
-    INSTALL_RESULT=$?
-fi
+# Install with minimal footprint:
+# -L = local-lib location
+# --notest = skip running tests (faster, smaller)
+# --no-man-pages = skip installing man pages (saves space)
+# --quiet = reduce output noise
+cpanm -L "$PERL5LIB_DIR" --notest --no-man-pages --quiet AnyEvent::MQTT
+INSTALL_RESULT=$?
 
 # Check installation result
 if [ $INSTALL_RESULT -eq 0 ]; then
     echo "<OK> Perl modules installed successfully!"
+
+    # Optional: Clean up unnecessary files to save space
+    echo "<INFO> Cleaning up build files..."
+    rm -rf "$PERL5LIB_DIR/man" 2>/dev/null
+    rm -rf "$PERL5LIB_DIR/.meta" 2>/dev/null
+    find "$PERL5LIB_DIR" -name "*.pod" -type f -delete 2>/dev/null
+    find "$PERL5LIB_DIR" -name "perllocal.pod" -type f -delete 2>/dev/null
+    echo "<OK> Cleanup complete."
 else
     echo "<WARNING> Perl module installation completed with warnings. Plugin may still work."
 fi

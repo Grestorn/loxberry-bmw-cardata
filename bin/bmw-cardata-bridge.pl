@@ -357,14 +357,9 @@ sub connect_to_bmw_mqtt {
     LOGDEB("Full ID Token: $id_token");
 
     # Wrap all MQTT operations in eval to catch errors
-    my $mqtt_error;
     eval {
         # Create MQTT connection with all required BMW parameters
-        LOGINF("Creating MQTT connection with SSL/TLS, keepalive=30, clean_session=1...");
-
-        # Create a condvar that will be signaled on connection success/failure
-        my $connect_cv = AnyEvent->condvar;
-        my $connected = 0;
+        LOGINF("Creating MQTT connection with TLS, keepalive=30, clean_session=1...");
 
         $bmw_mqtt = AnyEvent::MQTT->new(
             host => $host,
@@ -374,31 +369,23 @@ sub connect_to_bmw_mqtt {
             keep_alive_timer => 30,      # BMW expects 30 seconds keepalive
             clean_session => 1,           # Clean session flag
             timeout => 30,                # 30 second connection timeout
-            # SSL/TLS options - IMPORTANT: must use ssl => 1 for SSL/TLS
-            ssl => 1,
+            # TLS/SSL - use 'tls' parameter (not 'ssl')
+            tls => 1,
             on_error => sub {
                 my ($fatal, $message) = @_;
                 if ($fatal) {
                     LOGCRIT("FATAL MQTT error: $message");
                     $connection_active = 0;
-                    # Store error for later handling
-                    $mqtt_error = $message;
-                    # Signal connection failure if not yet connected
-                    $connect_cv->send(0) unless $connected;
                     # Exit event loop on fatal error
                     $mqtt_cv->send if $mqtt_cv;
                 } else {
                     LOGWARN("MQTT warning: $message");
                 }
             },
-            on_connect => sub {
-                LOGOK("MQTT connection established successfully");
-                $connected = 1;
-                $connect_cv->send(1);
-            },
         );
 
         LOGOK("MQTT connection object created successfully");
+        LOGINF("Connection will be established asynchronously when event loop starts...");
 
         # Subscribe to topics for each VIN
         my @vins = @{$current_config->{vins} || []};
@@ -454,31 +441,12 @@ sub connect_to_bmw_mqtt {
             }
         }
 
-        LOGOK("Subscriptions registered, waiting for connection...");
-
-        # Wait for connection to be established (with timeout)
-        my $timer = AnyEvent->timer(
-            after => 30,
-            cb => sub {
-                unless ($connected) {
-                    LOGERR("Connection timeout after 30 seconds");
-                    $connect_cv->send(0);
-                }
-            }
-        );
-
-        # Block until connection succeeds or fails
-        my $success = $connect_cv->recv;
-
-        unless ($success) {
-            die $mqtt_error || "Connection failed";
-        }
-
-        LOGOK("Successfully connected and subscribed to all topics");
+        LOGOK("Subscriptions registered");
+        LOGINF("Note: Actual connection happens asynchronously in event loop");
     };
 
     if ($@) {
-        LOGERR("Failed to connect to BMW MQTT: $@");
+        LOGERR("Failed to setup BMW MQTT: $@");
         return 0;
     }
 
@@ -533,12 +501,10 @@ sub cleanup_connections {
     LOGINF("Cleaning up connections...");
 
     # Cleanup BMW MQTT connection
-    # Note: AnyEvent::MQTT doesn't have disconnect() method
-    # Just undef the object - its DESTROY will call cleanup() automatically
+    # AnyEvent::MQTT has cleanup() method to destroy resources
     if ($bmw_mqtt) {
         eval {
-            # Optional: call cleanup() explicitly if needed
-            # $bmw_mqtt->cleanup();
+            $bmw_mqtt->cleanup();
             undef $bmw_mqtt;
             LOGDEB("BMW MQTT connection cleaned up");
         };

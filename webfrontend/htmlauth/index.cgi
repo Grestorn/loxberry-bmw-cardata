@@ -35,8 +35,10 @@ my $helptemplate = "help.html";
 our %navbar;
 $navbar{10}{Name} = $L{'NAVIGATION.MAIN'};
 $navbar{10}{URL} = 'index.cgi';
-$navbar{20}{Name} = $L{'NAVIGATION.LOGS'};
-$navbar{20}{URL} = 'index.cgi?page=logs';
+$navbar{20}{Name} = $L{'NAVIGATION.BRIDGE_LOGS'};
+$navbar{20}{URL} = 'index.cgi?page=bridge_logs';
+$navbar{30}{Name} = $L{'NAVIGATION.TOKEN_LOGS'};
+$navbar{30}{URL} = 'index.cgi?page=token_logs';
 
 # File paths
 my $data_dir = "$lbpdatadir";
@@ -225,7 +227,8 @@ sub prepare_template_vars {
 
     # Current page
     $template->param('PAGE_MAIN' => $page eq 'main');
-    $template->param('PAGE_LOGS' => $page eq 'logs');
+    $template->param('PAGE_BRIDGE_LOGS' => $page eq 'bridge_logs');
+    $template->param('PAGE_TOKEN_LOGS' => $page eq 'token_logs');
 
     # Device code status
     if ($device_code_data && exists $device_code_data->{device_code}) {
@@ -305,19 +308,21 @@ sub prepare_template_vars {
     $template->param('BRIDGE_STOPPED' => !$bridge_status->{running});
     $template->param('BRIDGE_PID' => $bridge_status->{pid} || 'N/A');
 
-    # Logs
-    if ($page eq 'logs') {
-        # Use LoxBerry::Web loglist_url to display log lists inline
+    # Logs - separate pages for each log type
+    if ($page eq 'bridge_logs') {
+        # Bridge logs page
         my $bridge_loglist_url = LoxBerry::Web::loglist_url(
             NAME => 'bmw-cardata-bridge',
             PACKAGE => $lbpplugindir
         );
+        $template->param('BRIDGE_LOGLIST_URL' => $bridge_loglist_url);
+    }
+    elsif ($page eq 'token_logs') {
+        # Token manager logs page
         my $token_loglist_url = LoxBerry::Web::loglist_url(
             NAME => 'token-manager',
             PACKAGE => $lbpplugindir
         );
-
-        $template->param('BRIDGE_LOGLIST_URL' => $bridge_loglist_url);
         $template->param('TOKEN_LOGLIST_URL' => $token_loglist_url);
     }
 }
