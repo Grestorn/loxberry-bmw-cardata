@@ -307,18 +307,18 @@ sub prepare_template_vars {
 
     # Logs
     if ($page eq 'logs') {
-        # Use LoxBerry::Web log buttons instead of custom log display
-        my $bridge_loglist_button = LoxBerry::Web::loglist_button_html(
+        # Use LoxBerry::Web loglist_url to display log lists inline
+        my $bridge_loglist_url = LoxBerry::Web::loglist_url(
             NAME => 'bmw-cardata-bridge',
             PACKAGE => $lbpplugindir
         );
-        my $token_loglist_button = LoxBerry::Web::loglist_button_html(
+        my $token_loglist_url = LoxBerry::Web::loglist_url(
             NAME => 'token-manager',
             PACKAGE => $lbpplugindir
         );
 
-        $template->param('BRIDGE_LOGLIST_BUTTON' => $bridge_loglist_button);
-        $template->param('TOKEN_LOGLIST_BUTTON' => $token_loglist_button);
+        $template->param('BRIDGE_LOGLIST_URL' => $bridge_loglist_url);
+        $template->param('TOKEN_LOGLIST_URL' => $token_loglist_url);
     }
 }
 
