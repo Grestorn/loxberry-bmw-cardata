@@ -10,19 +10,21 @@ use AnyEvent::MQTT;
 use IO::Socket::SSL qw(SSL_VERIFY_PEER);
 use LWP::UserAgent;
 use JSON;
-use IO::Socket::INET;
+use Net::MQTT::Simple;
 use Time::HiRes qw(sleep time);
 use File::Basename;
 use POSIX qw(strftime);
 use Getopt::Long;
+use LoxBerry::System;
+use LoxBerry::IO;
 use LoxBerry::Log;
 
 # Configuration
 use constant {
-    BMW_MQTT_PROTOCOL => 'mqtts',  # MQTT over SSL/TLS
-    RECONNECT_DELAY => 10,          # Seconds to wait before reconnect
-    TOKEN_CHECK_INTERVAL => 300,    # Check token expiry every 5 minutes
-    TOKEN_REFRESH_MARGIN => 600,    # Refresh when < 10 minutes left
+    BMW_MQTT_PROTOCOL => 'mqtts',     # MQTT over SSL/TLS
+    RECONNECT_DELAY => 900,            # Seconds to wait before reconnect (15 minutes)
+    TOKEN_CHECK_INTERVAL => 300,       # Check token expiry every 5 minutes
+    TOKEN_REFRESH_MARGIN => 600,       # Refresh when < 10 minutes left
 };
 
 # Plugin directories
@@ -45,7 +47,7 @@ GetOptions(
 my $running = 1;
 my $bmw_mqtt;
 my $mqtt_cv;  # AnyEvent condvar for MQTT connection
-my $loxberry_udp_socket;
+my $loxberry_mqtt;  # Net::MQTT::Simple connection to LoxBerry
 my $current_tokens;
 my $current_config;
 my $last_token_check = 0;
@@ -91,65 +93,87 @@ unless (load_configuration()) {
     die "Failed to load configuration.\n";
 }
 
-# Check if tokens need refresh
-check_and_refresh_tokens();
-
-# Connect to LoxBerry MQTT Gateway (UDP interface)
+# Connect to LoxBerry MQTT Gateway (one-time setup)
 unless (setup_loxberry_connection()) {
     LOGCRIT("Failed to setup LoxBerry connection.");
     LOGEND;
     die "Failed to setup LoxBerry connection.\n";
 }
 
-# Connect to BMW CarData MQTT
-unless (connect_to_bmw_mqtt()) {
-    LOGCRIT("Failed to connect to BMW MQTT.");
-    LOGEND;
-    die "Failed to connect to BMW MQTT.\n";
-}
+# Main reconnection loop
+while ($running) {
+    LOGINF("=== Starting connection cycle ===");
 
-$connection_active = 1;
-LOGOK("Bridge is active and forwarding messages");
+    # Check if tokens need refresh
+    check_and_refresh_tokens();
 
-# Set up periodic token check timer (every 5 minutes)
-my $token_check_timer = AnyEvent->timer(
-    after => TOKEN_CHECK_INTERVAL,
-    interval => TOKEN_CHECK_INTERVAL,
-    cb => sub {
-        LOGDEB("Periodic token check...");
-        check_and_refresh_tokens();
-
-        # Check if we need to reconnect (token expired)
-        if (token_expired()) {
-            LOGWARN("Token expired, need to reconnect...");
-            $connection_active = 0;
-            # Exit event loop to trigger reconnection
-            $mqtt_cv->send if $mqtt_cv;
-        }
+    # Check if tokens are still valid
+    if (token_expired()) {
+        LOGERR("Token expired and refresh failed. Waiting before retry...");
+        sleep(RECONNECT_DELAY);
+        next;
     }
-);
 
-# Create AnyEvent condvar for event loop
-$mqtt_cv = AnyEvent->condvar;
+    # Connect to BMW CarData MQTT
+    unless (connect_to_bmw_mqtt()) {
+        LOGERR("Failed to connect to BMW MQTT. Waiting " . RECONNECT_DELAY . " seconds before retry...");
+        sleep(RECONNECT_DELAY);
+        next;
+    }
 
-# Run the event loop (this blocks until $mqtt_cv->send is called)
-LOGINF("Starting AnyEvent event loop...");
+    $connection_active = 1;
+    LOGOK("Bridge is active and forwarding messages");
 
-# Wrap event loop in eval to catch all errors
-eval {
-    $mqtt_cv->recv;
-};
+    # Set up periodic token check timer (every 5 minutes)
+    my $token_check_timer = AnyEvent->timer(
+        after => TOKEN_CHECK_INTERVAL,
+        interval => TOKEN_CHECK_INTERVAL,
+        cb => sub {
+            LOGDEB("Periodic token check...");
+            check_and_refresh_tokens();
 
-# Check for errors from event loop
-if ($@) {
-    LOGCRIT("Event loop error: $@");
+            # Check if token was refreshed - if so, trigger reconnect
+            if (token_expired()) {
+                LOGWARN("Token expired despite refresh, triggering reconnect...");
+                $connection_active = 0;
+                $mqtt_cv->send if $mqtt_cv;
+            }
+        }
+    );
+
+    # Create AnyEvent condvar for event loop
+    $mqtt_cv = AnyEvent->condvar;
+
+    # Run the event loop (this blocks until $mqtt_cv->send is called or error occurs)
+    LOGINF("Starting AnyEvent event loop...");
+
+    # Wrap event loop in eval to catch all errors
+    my $loop_error;
+    eval {
+        $mqtt_cv->recv;
+    };
+    $loop_error = $@;
+
+    # Cleanup current connection
     cleanup_connections();
-    LOGEND;
-    exit 2;
+
+    # Check for errors from event loop
+    if ($loop_error) {
+        LOGERR("Event loop error: $loop_error");
+    }
+
+    # Check if we should continue running
+    unless ($running) {
+        LOGINF("Shutdown requested, exiting...");
+        last;
+    }
+
+    # Wait before reconnecting
+    LOGINF("Connection lost. Waiting " . RECONNECT_DELAY . " seconds before reconnecting...");
+    sleep(RECONNECT_DELAY);
 }
 
-# Cleanup and exit
-cleanup_connections();
+# Final cleanup
 LOGINF("=== BMW CarData MQTT Bridge Stopped ===");
 LOGEND;
 exit 0;
@@ -262,7 +286,7 @@ sub check_and_refresh_tokens {
             }
 
             if ($result == 0) {
-                LOGOK("Token refresh successful");
+                LOGOK("Token refresh successful - new id_token available");
                 # Reload tokens with error handling
                 eval {
                     $current_tokens = load_json($tokens_file);
@@ -272,7 +296,10 @@ sub check_and_refresh_tokens {
                     return;
                 }
                 # Trigger reconnection to use new id_token
+                LOGINF("Triggering reconnect to use new id_token...");
                 $connection_active = 0;
+                # Exit event loop to trigger reconnection in main loop
+                $mqtt_cv->send if $mqtt_cv;
             } else {
                 LOGERR("Token refresh failed with exit code: $result");
             }
@@ -290,41 +317,50 @@ sub token_expired {
 }
 
 #
-# LoxBerry MQTT Gateway Connection (UDP)
+# LoxBerry MQTT Gateway Connection (Net::MQTT::Simple)
 #
 
 sub setup_loxberry_connection {
     LOGINF("Setting up LoxBerry MQTT Gateway connection...");
 
-    # Try to use LoxBerry::IO if available
+    # Get MQTT connection details from LoxBerry
     my $mqtt_creds;
     eval {
-        require LoxBerry::IO;
         $mqtt_creds = LoxBerry::IO::mqtt_connectiondetails();
     };
 
     if ($@ || !$mqtt_creds) {
-        LOGWARN("LoxBerry::IO not available, using defaults");
-        $mqtt_creds = {
-            udpinport => 11884,  # Default LoxBerry MQTT UDP port
-        };
-    }
-
-    my $udp_port = $mqtt_creds->{udpinport} || 11884;
-
-    # Create UDP socket for publishing to LoxBerry MQTT Gateway
-    $loxberry_udp_socket = IO::Socket::INET->new(
-        PeerAddr => 'localhost',
-        PeerPort => $udp_port,
-        Proto => 'udp',
-    );
-
-    unless ($loxberry_udp_socket) {
-        LOGERR("Failed to create UDP socket: $!");
+        LOGERR("Failed to get MQTT connection details: $@");
         return 0;
     }
 
-    LOGOK("LoxBerry MQTT Gateway connection ready (UDP port $udp_port)");
+    my $broker_host = $mqtt_creds->{brokerhost} || 'localhost';
+    my $broker_port = $mqtt_creds->{brokerport} || 1883;
+    my $broker_user = $mqtt_creds->{brokeruser};
+    my $broker_pass = $mqtt_creds->{brokerpass};
+
+    LOGINF("Connecting to LoxBerry MQTT Gateway at $broker_host:$broker_port");
+
+    # Allow insecure login if no TLS
+    $ENV{MQTT_SIMPLE_ALLOW_INSECURE_LOGIN} = 1;
+
+    # Connect to LoxBerry MQTT Gateway
+    eval {
+        $loxberry_mqtt = Net::MQTT::Simple->new("$broker_host:$broker_port");
+
+        # Login if credentials provided
+        if ($broker_user && $broker_pass) {
+            LOGDEB("Authenticating with username: $broker_user");
+            $loxberry_mqtt->login($broker_user, $broker_pass);
+        }
+    };
+
+    if ($@) {
+        LOGERR("Failed to connect to LoxBerry MQTT: $@");
+        return 0;
+    }
+
+    LOGOK("LoxBerry MQTT Gateway connection established");
     return 1;
 }
 
@@ -469,23 +505,17 @@ sub handle_bmw_message {
 sub forward_to_loxberry {
     my ($topic, $message) = @_;
 
-    return unless $loxberry_udp_socket;
+    return unless $loxberry_mqtt;
 
     # Transform topic if prefix is configured
     my $prefix = $current_config->{mqtt_topic_prefix} || 'bmw';
     my $loxberry_topic = "$prefix/$topic";
 
-    # Format: "topic payload" for UDP interface
-    my $udp_message = "$loxberry_topic $message";
-
-    # Wrap UDP send in eval to catch any errors
+    # Publish to LoxBerry MQTT Gateway with retain flag
+    # Using retain() ensures the last value is stored permanently by the broker
     eval {
-        my $result = $loxberry_udp_socket->send($udp_message);
-        unless (defined $result) {
-            LOGERR("UDP send returned undef for topic: $loxberry_topic");
-        } else {
-            LOGDEB("Forwarded to LoxBerry: $loxberry_topic");
-        }
+        $loxberry_mqtt->retain($loxberry_topic, $message);
+        LOGDEB("Forwarded to LoxBerry (retained): $loxberry_topic => $message");
     };
 
     if ($@) {
@@ -513,16 +543,16 @@ sub cleanup_connections {
         }
     }
 
-    # Close LoxBerry UDP socket with error handling
-    if ($loxberry_udp_socket) {
+    # Cleanup LoxBerry MQTT connection
+    if ($loxberry_mqtt) {
         eval {
-            $loxberry_udp_socket->close();
-            LOGDEB("LoxBerry UDP socket closed");
+            # Net::MQTT::Simple connection cleanup (just undef is sufficient)
+            undef $loxberry_mqtt;
+            LOGDEB("LoxBerry MQTT connection closed");
         };
         if ($@) {
-            LOGERR("Error closing LoxBerry socket: $@");
+            LOGERR("Error closing LoxBerry MQTT: $@");
         }
-        undef $loxberry_udp_socket;
     }
 
     $connection_active = 0;
