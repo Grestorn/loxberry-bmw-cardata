@@ -2,8 +2,9 @@
 
 use strict;
 use warnings;
-use Net::MQTT::Simple;
-use IO::Socket::SSL;
+use AnyEvent;
+use AnyEvent::MQTT;
+use IO::Socket::SSL qw(SSL_VERIFY_PEER);
 use LWP::UserAgent;
 use JSON;
 use IO::Socket::INET;
@@ -11,6 +12,11 @@ use Time::HiRes qw(sleep time);
 use File::Basename;
 use POSIX qw(strftime);
 use Getopt::Long;
+
+# Enable auto-flush for immediate log output
+$| = 1;
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
 
 # Configuration
 use constant {
@@ -46,16 +52,28 @@ $verbose = 1 if $debug;
 # Global state
 my $running = 1;
 my $bmw_mqtt;
+my $mqtt_cv;  # AnyEvent condvar for MQTT connection
 my $loxberry_udp_socket;
 my $current_tokens;
 my $current_config;
 my $last_token_check = 0;
 my $connection_active = 0;
 
-# Signal handlers
-$SIG{TERM} = sub { log_msg("INFO", "Received SIGTERM, shutting down..."); $running = 0; };
-$SIG{INT} = sub { log_msg("INFO", "Received SIGINT, shutting down..."); $running = 0; };
-$SIG{HUP} = sub { log_msg("INFO", "Received SIGHUP, reloading configuration..."); reload_config(); };
+# Signal handlers for graceful shutdown
+$SIG{TERM} = sub {
+    log_msg("INFO", "Received SIGTERM, shutting down...");
+    $running = 0;
+    $mqtt_cv->send if $mqtt_cv;  # Exit event loop
+};
+$SIG{INT} = sub {
+    log_msg("INFO", "Received SIGINT, shutting down...");
+    $running = 0;
+    $mqtt_cv->send if $mqtt_cv;  # Exit event loop
+};
+$SIG{HUP} = sub {
+    log_msg("INFO", "Received SIGHUP, reloading configuration...");
+    reload_config();
+};
 
 # Main
 log_msg("INFO", "=== BMW CarData MQTT Bridge Starting ===");
@@ -67,62 +85,51 @@ if ($daemon) {
     daemonize();
 }
 
-# Main loop
-while ($running) {
-    eval {
-        # Load configuration and tokens
-        unless (load_configuration()) {
-            log_msg("ERROR", "Failed to load configuration, retrying in " . RECONNECT_DELAY . " seconds...");
-            sleep(RECONNECT_DELAY);
-            next;
-        }
+# Load configuration and tokens
+unless (load_configuration()) {
+    die "Failed to load configuration. Please configure plugin first.\n";
+}
 
-        # Check if tokens need refresh
+# Check if tokens need refresh
+check_and_refresh_tokens();
+
+# Connect to LoxBerry MQTT Gateway (UDP interface)
+unless (setup_loxberry_connection()) {
+    die "Failed to setup LoxBerry connection.\n";
+}
+
+# Connect to BMW CarData MQTT
+unless (connect_to_bmw_mqtt()) {
+    die "Failed to connect to BMW MQTT.\n";
+}
+
+$connection_active = 1;
+log_msg("INFO", "Bridge is active and forwarding messages");
+
+# Set up periodic token check timer (every 5 minutes)
+my $token_check_timer = AnyEvent->timer(
+    after => TOKEN_CHECK_INTERVAL,
+    interval => TOKEN_CHECK_INTERVAL,
+    cb => sub {
+        log_msg("DEBUG", "Periodic token check...") if $debug;
         check_and_refresh_tokens();
 
-        # Connect to LoxBerry MQTT Gateway (UDP interface)
-        unless (setup_loxberry_connection()) {
-            log_msg("ERROR", "Failed to setup LoxBerry connection, retrying in " . RECONNECT_DELAY . " seconds...");
-            sleep(RECONNECT_DELAY);
-            next;
+        # Check if we need to reconnect (token expired)
+        if (token_expired()) {
+            log_msg("WARN", "Token expired, need to reconnect...");
+            $connection_active = 0;
+            # Exit event loop to trigger reconnection
+            $mqtt_cv->send if $mqtt_cv;
         }
-
-        # Connect to BMW CarData MQTT
-        unless (connect_to_bmw_mqtt()) {
-            log_msg("ERROR", "Failed to connect to BMW MQTT, retrying in " . RECONNECT_DELAY . " seconds...");
-            cleanup_connections();
-            sleep(RECONNECT_DELAY);
-            next;
-        }
-
-        $connection_active = 1;
-        log_msg("INFO", "Bridge is active and forwarding messages");
-
-        # Keep connection alive and monitor
-        while ($running && $connection_active) {
-            sleep(1);
-
-            # Periodically check token expiry
-            if (time() - $last_token_check > TOKEN_CHECK_INTERVAL) {
-                check_and_refresh_tokens();
-            }
-
-            # Check if we need to reconnect (token expired)
-            if (token_expired()) {
-                log_msg("WARN", "Token expired, reconnecting...");
-                $connection_active = 0;
-            }
-        }
-
-        cleanup_connections();
-
-    };
-    if ($@) {
-        log_msg("ERROR", "Exception in main loop: $@");
-        cleanup_connections();
-        sleep(RECONNECT_DELAY) if $running;
     }
-}
+);
+
+# Create AnyEvent condvar for event loop
+$mqtt_cv = AnyEvent->condvar;
+
+# Run the event loop (this blocks until $mqtt_cv->send is called)
+log_msg("INFO", "Starting AnyEvent event loop...");
+$mqtt_cv->recv;
 
 # Cleanup and exit
 cleanup_connections();
@@ -302,27 +309,41 @@ sub connect_to_bmw_mqtt {
         return 0;
     }
 
-    my $broker_url = BMW_MQTT_PROTOCOL . "://$host:$port";
-    log_msg("INFO", "Connecting to $broker_url");
+    log_msg("INFO", "Connecting to mqtts://$host:$port");
     log_msg("INFO", "MQTT Username: $stream_username");
     log_msg("INFO", "ID Token (first 50 chars): " . substr($id_token, 0, 50) . "...");
     log_msg("INFO", "ID Token (last 50 chars): ..." . substr($id_token, -50));
     log_msg("DEBUG", "Full ID Token: $id_token") if $debug;
 
     eval {
-        # Set up SSL/TLS options for secure connection
-        $ENV{MQTT_SIMPLE_SSL_VERIFY_HOSTNAME} = 1;
+        # Create MQTT connection with all required BMW parameters
+        log_msg("INFO", "Creating MQTT connection with SSL/TLS, keepalive=30, clean_session=1...");
 
-        # Create MQTT connection with SSL/TLS
-        log_msg("INFO", "Creating MQTT connection with SSL/TLS...");
-        $bmw_mqtt = Net::MQTT::Simple->new($broker_url);
+        $bmw_mqtt = AnyEvent::MQTT->new(
+            host => $host,
+            port => $port,
+            user_name => $stream_username,
+            password => $id_token,
+            keep_alive_timer => 30,      # BMW expects 30 seconds keepalive
+            clean_session => 1,           # Clean session flag
+            timeout => 30,                # 30 second connection timeout
+            # SSL/TLS options
+            ssl => {
+                verify_hostname => 1,
+                SSL_verify_mode => SSL_VERIFY_PEER,
+            },
+            on_error => sub {
+                my ($fatal, $message) = @_;
+                if ($fatal) {
+                    log_msg("ERROR", "FATAL MQTT error: $message");
+                    $connection_active = 0;
+                } else {
+                    log_msg("WARN", "MQTT warning: $message");
+                }
+            },
+        );
 
-        log_msg("INFO", "MQTT connection object created, attempting login...");
-
-        # Authenticate with stream_username as username and ID token as password
-        $bmw_mqtt->login($stream_username, $id_token);
-
-        log_msg("INFO", "Successfully authenticated to BMW MQTT");
+        log_msg("INFO", "MQTT connection object created successfully");
 
         # Subscribe to topics for each VIN
         my @vins = @{$current_config->{vins} || []};
@@ -331,17 +352,32 @@ sub connect_to_bmw_mqtt {
             log_msg("WARN", "No VINs configured, subscribing to all user topics");
             my $topic = "$stream_username/#";
             log_msg("INFO", "Subscribing to topic: $topic");
-            $bmw_mqtt->subscribe($topic, \&handle_bmw_message);
+
+            $bmw_mqtt->subscribe(
+                topic => $topic,
+                qos => 0,
+                callback => sub {
+                    my ($topic, $message) = @_;
+                    handle_bmw_message($topic, $message);
+                }
+            );
         } else {
             foreach my $vin (@vins) {
                 my $topic = "$stream_username/$vin";
                 log_msg("INFO", "Subscribing to topic: $topic");
-                $bmw_mqtt->subscribe($topic, \&handle_bmw_message);
+
+                $bmw_mqtt->subscribe(
+                    topic => $topic,
+                    qos => 0,
+                    callback => sub {
+                        my ($topic, $message) = @_;
+                        handle_bmw_message($topic, $message);
+                    }
+                );
             }
         }
 
-        # Start message loop in background
-        # Net::MQTT::Simple handles this internally
+        log_msg("INFO", "Successfully subscribed to all topics");
     };
 
     if ($@) {
@@ -419,6 +455,10 @@ sub daemonize {
     open STDIN, '<', '/dev/null' or die "Can't read /dev/null: $!";
     open STDOUT, '>>', "$log_dir/bridge.log" or die "Can't write to log: $!";
     open STDERR, '>>&STDOUT' or die "Can't dup stdout: $!";
+
+    # Enable auto-flush for daemon log output
+    STDOUT->autoflush(1);
+    STDERR->autoflush(1);
 
     defined(my $pid = fork) or die "Can't fork: $!";
     exit if $pid;
