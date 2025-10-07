@@ -54,6 +54,30 @@ cp -p -v -r $PTEMPPATH/upgrade/logs/* $PLOGS
 echo "<INFO> Remove temporary folders"
 rm -r $PTEMPPATH/upgrade
 
-# your code goes here
+# Restart bridge if it was running before upgrade
+echo "<INFO> BMW CarData: Checking if bridge should be restarted..."
+
+if [ -f "$PDATA/.bridge_was_running" ]; then
+    echo "<INFO> BMW CarData: Bridge was running before upgrade, restarting..."
+
+    # Start bridge via bridge-control.sh
+    if [ -x "$PBIN/bridge-control.sh" ]; then
+        "$PBIN/bridge-control.sh" start
+        if [ $? -eq 0 ]; then
+            echo "<OK> BMW CarData: Bridge restarted successfully"
+        else
+            echo "<WARNING> BMW CarData: Failed to restart bridge"
+        fi
+    else
+        echo "<WARNING> BMW CarData: bridge-control.sh not found or not executable"
+    fi
+
+    # Remove state file
+    rm -f "$PDATA/.bridge_was_running"
+else
+    echo "<INFO> BMW CarData: Bridge was not running before upgrade, not starting"
+fi
+
+echo "<OK> BMW CarData: Post-upgrade completed"
 
 exit 0

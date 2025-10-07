@@ -46,6 +46,47 @@ PCONFIG=$LBPCONFIG/$PDIR
 PSBIN=$LBPSBIN/$PDIR
 PBIN=$LBPBIN/$PDIR
 
+# Stop BMW CarData bridge if running and save state BEFORE backup
+echo "<INFO> BMW CarData: Checking if bridge is running..."
+
+BRIDGE_WAS_RUNNING=0
+if [ -f "$PDATA/bridge.pid" ]; then
+    PID=$(cat "$PDATA/bridge.pid")
+    if ps -p "$PID" > /dev/null 2>&1; then
+        echo "<INFO> BMW CarData: Bridge is currently running (PID $PID)"
+        BRIDGE_WAS_RUNNING=1
+
+        # Save state for postupgrade BEFORE backup
+        echo "1" > "$PDATA/.bridge_was_running"
+
+        # Stop the bridge
+        echo "<INFO> BMW CarData: Stopping MQTT bridge daemon..."
+        kill -TERM "$PID"
+
+        # Wait for graceful shutdown
+        COUNTER=0
+        while ps -p "$PID" > /dev/null 2>&1 && [ $COUNTER -lt 10 ]; do
+            sleep 1
+            COUNTER=$((COUNTER + 1))
+        done
+
+        # Force kill if still running
+        if ps -p "$PID" > /dev/null 2>&1; then
+            echo "<WARNING> BMW CarData: Force stopping daemon..."
+            kill -KILL "$PID"
+        fi
+
+        echo "<OK> BMW CarData: Daemon stopped"
+    else
+        echo "<INFO> BMW CarData: Bridge PID file exists but process not running"
+    fi
+    rm -f "$PDATA/bridge.pid"
+else
+    echo "<INFO> BMW CarData: Bridge is not running"
+    # Make sure state file doesn't exist
+    rm -f "$PDATA/.bridge_was_running"
+fi
+
 echo "<INFO> Creating temporary folders for upgrading"
 mkdir -p $PTEMPPATH/upgrade
 mkdir -p $PTEMPPATH/upgrade/config
@@ -57,7 +98,6 @@ cp -p -v -r $PCONFIG/* $PTEMPPATH/upgrade/config
 cp -p -v -r $PDATA/* $PTEMPPATH/upgrade/data
 cp -p -v -r $PLOGS/* $PTEMPPATH/upgrade/logs
 
+echo "<OK> BMW CarData: Pre-upgrade completed"
 
-# Your code goes here
- 
 exit 0
