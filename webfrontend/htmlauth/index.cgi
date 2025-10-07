@@ -311,19 +311,19 @@ sub prepare_template_vars {
     # Logs - separate pages for each log type
     if ($page eq 'bridge_logs') {
         # Bridge logs page
-        my $bridge_loglist_url = LoxBerry::Web::loglist_url(
+        my $bridge_loglist_html = LoxBerry::Web::loglist_html(
             NAME => 'bmw-cardata-bridge',
             PACKAGE => $lbpplugindir
         );
-        $template->param('BRIDGE_LOGLIST_URL' => $bridge_loglist_url);
+        $template->param('BRIDGE_LOGLIST_URL' => $bridge_loglist_html);
     }
     elsif ($page eq 'token_logs') {
         # Token manager logs page
-        my $token_loglist_url = LoxBerry::Web::loglist_url(
+        my $token_loglist_html = LoxBerry::Web::loglist_html(
             NAME => 'token-manager',
             PACKAGE => $lbpplugindir
         );
-        $template->param('TOKEN_LOGLIST_URL' => $token_loglist_url);
+        $template->param('TOKEN_LOGLIST_URL' => $token_loglist_html);
     }
 }
 
@@ -453,4 +453,3 @@ sub load_device_code {
 
     return eval { decode_json($json_text) };
 }
-
