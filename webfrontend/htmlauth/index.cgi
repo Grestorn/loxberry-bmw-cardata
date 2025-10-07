@@ -9,6 +9,7 @@ use CGI;
 use LoxBerry::System;
 use LoxBerry::Web;
 use LoxBerry::JSON;
+use LoxBerry::Log;
 use JSON;
 use File::Basename;
 
@@ -455,7 +456,7 @@ sub get_plugin_log_output {
     my ($log_name) = @_;
 
     # Get notifications from LoxBerry::Log
-    my $notifications = get_notifications($lbpplugindir, $log_name);
+    my $notifications = LoxBerry::Log::get_notifications($lbpplugindir, $log_name);
 
     unless ($notifications) {
         return "No log entries found";
