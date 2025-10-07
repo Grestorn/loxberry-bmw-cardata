@@ -111,9 +111,14 @@ sub handle_save_config {
     # Check if client_id changed and is not empty
     my $new_client_id = $new_config->{client_id};
     if ($new_client_id && $new_client_id ne '' && $new_client_id ne $old_client_id) {
-        # Client ID changed - automatically start OAuth initialization
+        # Client ID changed - reset OAuth state
+        # Delete existing tokens and OAuth temporary files
+        unlink($tokens_file) if -f $tokens_file;
+        unlink("$data_dir/pkce.json") if -f "$data_dir/pkce.json";
+        unlink("$data_dir/device_code.json") if -f "$data_dir/device_code.json";
+
         $template->param('CLIENT_ID_CHANGED' => 1);
-        handle_request_device_code();
+        $template->param('CLIENT_ID_CHANGE_MESSAGE' => $L{'STATUS.CLIENT_ID_CHANGED_INFO'});
     }
 }
 

@@ -7,6 +7,11 @@
 <div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
     <span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
     <strong><TMPL_VAR SAVE_MESSAGE></strong>
+    <TMPL_IF CLIENT_ID_CHANGED>
+    <br><br>
+    <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+    <strong><TMPL_VAR CLIENT_ID_CHANGE_MESSAGE></strong>
+    </TMPL_IF>
 </div>
 </TMPL_IF>
 
@@ -52,42 +57,52 @@
 </TMPL_IF>
 
 <TMPL_IF DEVICE_CODE_ERROR>
-<div class="ui-state-error ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
-    <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
-    <strong><TMPL_VAR STATUS.DEVICE_CODE_ERROR></strong>
-    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR DEVICE_CODE_OUTPUT></pre>
+<div class="ui-state-error ui-corner-all" style="padding: 15px; margin-bottom: 20px; border: 2px solid #d00;">
+    <h3 style="margin: 0 0 10px 0; color: #d00;">
+        <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+        <TMPL_VAR STATUS.DEVICE_CODE_ERROR>
+    </h3>
+    <pre style="margin: 0; background: #fff; padding: 10px; border: 1px solid #d00; border-radius: 3px; overflow: auto;"><TMPL_VAR DEVICE_CODE_OUTPUT></pre>
 </div>
 </TMPL_IF>
 
 <TMPL_IF OAUTH_POLL_SUCCESS>
-<div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
-    <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em;"></span>
-    <strong><TMPL_VAR STATUS.OAUTH_SUCCESS></strong>
-    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR OAUTH_POLL_OUTPUT></pre>
+<div class="ui-state-highlight ui-corner-all" style="padding: 15px; margin-bottom: 20px; border: 2px solid #4caf50;">
+    <h3 style="margin: 0 0 10px 0; color: #4caf50;">
+        <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em;"></span>
+        <TMPL_VAR STATUS.OAUTH_SUCCESS>
+    </h3>
+    <pre style="margin: 0; background: #fff; padding: 10px; border: 1px solid #4caf50; border-radius: 3px; overflow: auto;"><TMPL_VAR OAUTH_POLL_OUTPUT></pre>
 </div>
 </TMPL_IF>
 
 <TMPL_IF OAUTH_POLL_ERROR>
-<div class="ui-state-error ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
-    <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
-    <strong><TMPL_VAR STATUS.OAUTH_POLL_ERROR></strong>
-    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR OAUTH_POLL_OUTPUT></pre>
+<div class="ui-state-error ui-corner-all" style="padding: 15px; margin-bottom: 20px; border: 2px solid #d00;">
+    <h3 style="margin: 0 0 10px 0; color: #d00;">
+        <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+        <TMPL_VAR STATUS.OAUTH_POLL_ERROR>
+    </h3>
+    <pre style="margin: 0; background: #fff; padding: 10px; border: 1px solid #d00; border-radius: 3px; overflow: auto;"><TMPL_VAR OAUTH_POLL_OUTPUT></pre>
 </div>
 </TMPL_IF>
 
 <TMPL_IF TOKEN_REFRESH_SUCCESS>
-<div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
-    <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em;"></span>
-    <strong><TMPL_VAR STATUS.TOKEN_REFRESH_SUCCESS></strong>
-    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR TOKEN_REFRESH_OUTPUT></pre>
+<div class="ui-state-highlight ui-corner-all" style="padding: 15px; margin-bottom: 20px; border: 2px solid #4caf50;">
+    <h3 style="margin: 0 0 10px 0; color: #4caf50;">
+        <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em;"></span>
+        <TMPL_VAR STATUS.TOKEN_REFRESH_SUCCESS>
+    </h3>
+    <pre style="margin: 0; background: #fff; padding: 10px; border: 1px solid #4caf50; border-radius: 3px; overflow: auto;"><TMPL_VAR TOKEN_REFRESH_OUTPUT></pre>
 </div>
 </TMPL_IF>
 
 <TMPL_IF TOKEN_REFRESH_ERROR>
-<div class="ui-state-error ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
-    <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
-    <strong><TMPL_VAR STATUS.TOKEN_REFRESH_ERROR></strong>
-    <pre style="margin-top: 10px; background: #f5f5f5; padding: 10px;"><TMPL_VAR TOKEN_REFRESH_OUTPUT></pre>
+<div class="ui-state-error ui-corner-all" style="padding: 15px; margin-bottom: 20px; border: 2px solid #d00;">
+    <h3 style="margin: 0 0 10px 0; color: #d00;">
+        <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+        <TMPL_VAR STATUS.TOKEN_REFRESH_ERROR>
+    </h3>
+    <pre style="margin: 0; background: #fff; padding: 10px; border: 1px solid #d00; border-radius: 3px; overflow: auto;"><TMPL_VAR TOKEN_REFRESH_OUTPUT></pre>
 </div>
 </TMPL_IF>
 
@@ -111,16 +126,9 @@
         <TMPL_IF AUTH_VALID>
             <p><span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em; color: green;"></span>
             <strong><TMPL_VAR STATUS.AUTHENTICATED></strong></p>
-            <p><TMPL_VAR STATUS.USER_ID>: <strong><TMPL_VAR GCID></strong></p>
 
             <TMPL_IF ACCESS_TOKEN>
-            <div style="margin: 15px 0; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 3px;">
-                <p style="margin: 0 0 5px 0;"><strong><TMPL_VAR STATUS.CURRENT_ACCESS_TOKEN>:</strong></p>
-                <textarea readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 11px; resize: vertical;"><TMPL_VAR ACCESS_TOKEN></textarea>
-                <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #666;">
-                    <TMPL_VAR STATUS.TOKEN_COPY_HINT>
-                </p>
-            </div>
+            <p><TMPL_VAR STATUS.CURRENT_ACCESS_TOKEN>: <strong style="font-family: monospace; word-break: break-all;"><TMPL_VAR ACCESS_TOKEN></strong></p>
             </TMPL_IF>
 
             <p><TMPL_VAR STATUS.TOKEN_EXPIRES>: <strong><TMPL_VAR TOKEN_EXPIRES_MINUTES></strong> <TMPL_VAR STATUS.MINUTES></p>
@@ -144,13 +152,12 @@
         <TMPL_IF AUTH_EXPIRED>
             <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em; color: orange;"></span>
             <strong><TMPL_VAR STATUS.TOKEN_EXPIRED></strong></p>
-            <p><TMPL_VAR STATUS.USER_ID>: <strong><TMPL_VAR GCID></strong></p>
 
             <TMPL_IF ACCESS_TOKEN>
-                <p><TMPL_VAR STATUS.CURRENT_ACCESS_TOKEN>: <strong><TMPL_VAR ACCESS_TOKEN></strong></p>
-                <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #ff6600;">
-                    <TMPL_VAR STATUS.TOKEN_EXPIRED_HINT>
-                </p>
+            <p><TMPL_VAR STATUS.CURRENT_ACCESS_TOKEN>: <strong style="font-family: monospace; word-break: break-all;"><TMPL_VAR ACCESS_TOKEN></strong></p>
+            <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #ff6600;">
+                <TMPL_VAR STATUS.TOKEN_EXPIRED_HINT>
+            </p>
             </TMPL_IF>
 
             <TMPL_IF REFRESH_EXPIRED>
