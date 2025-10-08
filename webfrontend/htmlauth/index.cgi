@@ -131,12 +131,6 @@ sub handle_request_device_code {
     system("$bin_dir/oauth-init.pl >/dev/null 2>&1");
     my $exit_code = $? >> 8;
 
-    # Generate log button to view results
-    my $log_button = LoxBerry::Web::logfile_button_html(
-        NAME => 'oauth-init',
-        PACKAGE => $lbpplugindir
-    );
-
     if ($exit_code == 0) {
         # Load device code response to extract verification URI
         my $device_file = "$data_dir/device_code.json";
@@ -152,12 +146,29 @@ sub handle_request_device_code {
                 $template->param('OAUTH_VERIFICATION_URI' => $verification_uri);
                 $template->param('OAUTH_USER_CODE' => $user_code);
                 $template->param('OAUTH_EXPIRES_MINUTES' => int($expires_in / 60));
-                $template->param('DEVICE_CODE_LOG_BUTTON' => $log_button);
+
+                # Automatically start polling for tokens
+                # This will block until user completes authentication or timeout occurs
+                system("$bin_dir/oauth-poll.pl >/dev/null 2>&1");
+                my $poll_exit_code = $? >> 8;
+
+                if ($poll_exit_code == 0) {
+                    # Authentication successful
+                    $template->param('OAUTH_POLL_SUCCESS' => 1);
+
+                    # Auto-start bridge after successful registration
+                    my $bridge_status = get_bridge_status();
+                    unless ($bridge_status->{running}) {
+                        system("$bin_dir/bridge-control.sh start >/dev/null 2>&1");
+                    }
+                } else {
+                    # Authentication failed or timeout
+                    $template->param('OAUTH_POLL_TIMEOUT' => 1);
+                }
             }
         }
     } else {
         $template->param('DEVICE_CODE_ERROR' => 1);
-        $template->param('DEVICE_CODE_LOG_BUTTON' => $log_button);
     }
 }
 
