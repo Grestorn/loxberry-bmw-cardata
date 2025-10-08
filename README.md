@@ -71,9 +71,10 @@ Die Daten werden von BMW in Echtzeit übertragen, sobald sich einer der Werte ä
 2. Button **"CarData Client erstellen"** klicken
 3. Im sich öffnenden Fenster wird die neu erzeugte **Client-ID** angezeigt
 4. **Client-ID kopieren** und für Schritt 5 bereithalten
-5. Option **"CarData Stream"** aktivieren
-6. **Wichtig:** "Zugang zur CarData API beantragen" ist NICHT notwendig
-7. **⚠️ NICHT auf den Button "Gerät authentifizieren" drücken!** (Die Authentifizierung erfolgt später über das Plugin)
+5. **Beide Optionen aktivieren:**
+   - ✅ **"CarData Stream"**
+   - ✅ **"Zugang zur CarData API beantragen"**
+6. **⚠️ NICHT auf den Button "Gerät authentifizieren" drücken!** (Die Authentifizierung erfolgt später über das Plugin)
 
 > **ℹ️ Hinweis:** Die BMW CarData Seite hat derzeit Performance-Probleme und reagiert sehr langsam. Es können auch 10-20 Sekunden nach einem Klick noch Fehlermeldungen erscheinen. Falls dies passiert, muss der Vorgang wiederholt werden.
 
@@ -314,9 +315,10 @@ Data is transmitted by BMW in real-time as soon as any value changes. This ensur
 2. Click the **"Create CarData Client"** button
 3. The newly generated **Client ID** will be displayed in the opening window
 4. **Copy the Client ID** and keep it for step 5
-5. Activate the **"CarData Stream"** option
-6. **Important:** "Request access to CarData API" is NOT required
-7. **⚠️ DO NOT click the "Authenticate Device" button!** (Authentication will be done later via the plugin)
+5. **Activate both options:**
+   - ✅ **"CarData Stream"**
+   - ✅ **"Request access to CarData API"**
+6. **⚠️ DO NOT click the "Authenticate Device" button!** (Authentication will be done later via the plugin)
 
 > **ℹ️ Note:** The BMW CarData page currently has performance issues and responds very slowly. Error messages may appear even 10-20 seconds after a click. If this happens, the process must be repeated.
 
@@ -490,6 +492,81 @@ A: No, BMW CarData is available free of charge for BMW customers.
 
 **Q: What happens after a LoxBerry reboot?**
 A: The bridge starts automatically at system startup. Tokens are updated by the cron job every 10 minutes.
+
+---
+
+## Technical Implementation
+
+This section provides a high-level overview of the plugin's technical architecture.
+
+### Architecture Overview
+
+The plugin consists of several components:
+
+- **Web Interface** (`webfrontend/htmlauth/index.cgi`): Perl CGI script providing configuration UI and OAuth flow management
+- **OAuth Scripts** (`bin/oauth-init.pl`, `bin/oauth-poll.pl`): Handle BMW OAuth 2.0 Device Code Flow (RFC 8628)
+- **Token Manager** (`bin/token-manager.pl`): Manages automatic token refresh (runs via cron every 10 minutes)
+- **MQTT Bridge** (`bin/bmw-cardata-bridge.pl`): Daemon process that connects to BMW CarData MQTT stream and forwards messages to LoxBerry MQTT Gateway
+- **Bridge Control** (`bin/bridge-control.sh`): System script for starting/stopping/restarting the bridge daemon
+
+### OAuth 2.0 Authentication Flow
+
+The plugin uses **OAuth 2.0 Device Authorization Grant** (RFC 8628):
+
+1. **Device Code Request**: Generate PKCE challenge and request device code from BMW API
+2. **User Authorization**: User authenticates via BMW web portal using the device code
+3. **Token Polling**: Plugin polls BMW API to retrieve access token, ID token, and refresh token
+4. **Token Refresh**: Tokens are automatically refreshed every 10 minutes via cron job (valid for 1 hour, refresh token valid for 2 weeks)
+
+**Key Tokens:**
+- **Access Token**: Used for BMW CarData REST API calls (1 hour validity)
+- **ID Token**: Used as MQTT password for streaming connection (1 hour validity)
+- **Refresh Token**: Used to obtain new access/ID tokens (2 weeks validity)
+
+### MQTT Bridge Implementation
+
+The bridge uses two MQTT connections:
+
+1. **BMW CarData Connection** (`AnyEvent::MQTT`):
+   - Protocol: MQTTS (MQTT over TLS)
+   - Authentication: GCID (username) + ID Token (password)
+   - Subscribes to: `<GCID>/<VIN>` for all configured vehicles
+   - Limitation: Only ONE connection per GCID allowed by BMW
+
+2. **LoxBerry MQTT Gateway Connection** (`Net::MQTT::Simple`):
+   - Publishes to local LoxBerry MQTT broker
+   - Topic transformation: `<GCID>/<VIN>/...` → `<prefix>/<VIN>/...` (username removed)
+
+**Auto-Reconnect**: The bridge monitors `tokens.json` every 5 minutes and automatically reconnects when new tokens are detected (after cron job refresh).
+
+### Data Persistence
+
+- **`data/config.json`**: Plugin configuration (Client ID, Stream Host, VINs, MQTT prefix)
+- **`data/tokens.json`**: OAuth tokens and expiry timestamps
+- **`data/device_code.json`**: Temporary file during OAuth flow (deleted after successful authentication)
+- **`data/pkce.json`**: Temporary PKCE verifier during OAuth flow (deleted after successful authentication)
+- **`data/bridge.pid`**: PID file for bridge daemon process
+
+### Automatic Functions
+
+- **Token Refresh**: Cron job (`cron/cron.10min`) runs token-manager every 10 minutes to refresh tokens 15 minutes before expiry
+- **Bridge Auto-start**: Boot script (`cron/cron.reboot`) starts bridge daemon on system startup
+- **Graceful Shutdown**: Bridge handles SIGTERM/SIGINT for clean shutdown during plugin updates
+
+### Technology Stack
+
+- **Perl**: Core language for LoxBerry plugin development
+- **LoxBerry Modules**: `LoxBerry::System`, `LoxBerry::Web`, `LoxBerry::Log`, `LoxBerry::JSON`, `LoxBerry::IO`
+- **MQTT Libraries**: `AnyEvent::MQTT` (async BMW connection), `Net::MQTT::Simple` (LoxBerry connection)
+- **HTTP Client**: `LWP::UserAgent` for BMW API calls
+- **Template Engine**: `HTML::Template` for web interface
+
+### Security Considerations
+
+- OAuth tokens stored in `data/` directory (protected by LoxBerry file permissions)
+- PKCE (Proof Key for Code Exchange) used for OAuth flow to prevent authorization code interception
+- MQTT connection to BMW uses TLS encryption
+- No credentials stored in plugin code or configuration
 
 ---
 
