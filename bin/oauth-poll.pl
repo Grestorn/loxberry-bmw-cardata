@@ -106,8 +106,6 @@ while (time() < $deadline && $attempt < $max_attempts) {
 
             # Display token information
             LOGDEB("=== Token Information ===");
-            print "Access Token (GCDM - for manual API testing):\n";
-            print "$token_response->{access_token}\n\n";
             LOGDEB("ID Token:      " . substr($token_response->{id_token}, 0, 20) . "...");
             LOGDEB("Refresh Token: " . substr($token_response->{refresh_token}, 0, 20) . "...");
             LOGDEB("GCID:          $token_response->{gcid}") if exists $token_response->{gcid};
@@ -154,11 +152,6 @@ while (time() < $deadline && $attempt < $max_attempts) {
             unlink($device_file);
             LOGOK("Cleaned up temporary files");
 
-            print "\n=== Next Steps ===\n";
-            print "1. Configure your VIN and stream settings in the web interface\n";
-            print "2. Start the BMW CarData bridge daemon\n";
-            print "3. Tokens will be automatically refreshed by cron job\n\n";
-
             LOGEND;
             exit 0;
         }
@@ -197,7 +190,6 @@ while (time() < $deadline && $attempt < $max_attempts) {
 
 # If we get here, polling timed out
 LOGCRIT("Polling timed out. Authorization not completed in time.");
-print "Please run oauth-init.pl again to start a new authorization flow.\n\n";
 LOGEND;
 exit 1;
 

@@ -89,21 +89,6 @@ LOGOK("Device code data saved to $device_file");
 
 # Step 3: Display verification URI (do NOT open browser automatically)
 LOGINF("=== Authorization Required ===");
-if (exists $device_response->{verification_uri_complete}) {
-    print "Verification URL (with pre-filled code):\n";
-    print "  $device_response->{verification_uri_complete}\n\n";
-} else {
-    print "Verification URL:\n";
-    print "  $device_response->{verification_uri}\n\n";
-    print "User Code (enter in browser):\n";
-    print "  $device_response->{user_code}\n\n";
-}
-
-print "=== Next Steps ===\n";
-print "1. Click the verification link shown in the web interface\n";
-print "2. Log in with your BMW ID credentials\n";
-print "3. Approve the authorization request\n";
-print "4. Return to web interface and click 'Retrieve Tokens'\n\n";
 
 LOGEND;
 

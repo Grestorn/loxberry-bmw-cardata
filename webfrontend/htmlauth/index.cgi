@@ -188,18 +188,30 @@ sub handle_check_oauth {
 }
 
 sub handle_start_bridge {
-    my $output = qx{$bin_dir/bridge-control.sh start 2>&1};
-    $template->param('BRIDGE_ACTION_OUTPUT' => $output);
+    system("$bin_dir/bridge-control.sh start >/dev/null 2>&1");
+    my $exit_code = $? >> 8;
+
+    if ($exit_code != 0) {
+        $template->param('BRIDGE_START_ERROR' => 1);
+    }
 }
 
 sub handle_stop_bridge {
-    my $output = qx{$bin_dir/bridge-control.sh stop 2>&1};
-    $template->param('BRIDGE_ACTION_OUTPUT' => $output);
+    system("$bin_dir/bridge-control.sh stop >/dev/null 2>&1");
+    my $exit_code = $? >> 8;
+
+    if ($exit_code != 0) {
+        $template->param('BRIDGE_STOP_ERROR' => 1);
+    }
 }
 
 sub handle_restart_bridge {
-    my $output = qx{$bin_dir/bridge-control.sh restart 2>&1};
-    $template->param('BRIDGE_ACTION_OUTPUT' => $output);
+    system("$bin_dir/bridge-control.sh restart >/dev/null 2>&1");
+    my $exit_code = $? >> 8;
+
+    if ($exit_code != 0) {
+        $template->param('BRIDGE_RESTART_ERROR' => 1);
+    }
 }
 
 sub handle_refresh_token {
