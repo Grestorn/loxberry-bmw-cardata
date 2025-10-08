@@ -185,6 +185,17 @@
                 <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_DEVICE_CODE></p>
                 </TMPL_IF>
             </li>
+            <li><TMPL_VAR OAUTH.STEP5>
+                <form method="post" action="index.cgi" style="margin-top: 10px;">
+                    <input type="hidden" name="action" value="check_oauth">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all" <TMPL_UNLESS OAUTH_VERIFICATION_URI>disabled</TMPL_UNLESS>>
+                        <TMPL_VAR OAUTH.POLL_BUTTON>
+                    </button>
+                </form>
+                <TMPL_UNLESS OAUTH_VERIFICATION_URI>
+                <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_VERIFICATION></p>
+                </TMPL_UNLESS>
+            </li>
         </ol>
     </div>
 </div>
