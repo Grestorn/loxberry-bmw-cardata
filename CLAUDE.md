@@ -306,41 +306,51 @@ Common authentication errors:
 - **REST API**: 50 requests per day
 - **Streaming**: No rate limit (use for frequent data access)
 
-## Plugin Implementation Strategy
+## Actual Plugin Implementation
 
-This plugin should implement:
+The plugin consists of four main Perl scripts:
 
 ### 1. Web Interface (webfrontend/htmlauth/index.cgi)
-- Display plugin status (OAuth status, MQTT connection status)
-- Initiate OAuth Device Code Flow
-- Display user_code and verification_uri for user authorization
-- Show current token expiry times
-- Configuration form for BMW stream attributes selection
+- CGI script using LoxBerry::System, LoxBerry::Web, HTML::Template
+- Handles configuration (client_id, stream_host, VINs, MQTT prefix)
+- Initiates OAuth Device Code Flow via oauth-init.pl
+- Polls for tokens via oauth-poll.pl
+- Controls bridge daemon (start/stop/restart)
+- Displays bridge status and logs
 
-### 2. Background Daemon (bin/bmw-cardata-bridge.pl)
-- Run continuously as background process
-- Connect to BMW CarData MQTT (using id_token)
-- Subscribe to BMW topics (`<gcid>/<vin>`)
-- Forward messages to LoxBerry MQTT Gateway (via UDP)
-- Reconnect when id_token expires (every ~50 minutes)
-- Handle token refresh automatically
+### 2. OAuth Initialization (bin/oauth-init.pl)
+- Generates PKCE code_verifier and code_challenge
+- Requests device code from BMW `/gcdm/oauth/device/code`
+- Saves device_code and pkce data to data/ directory
+- Returns user_code and verification_uri for user
 
-### 3. Token Management (bin/token-manager.pl)
-- Store tokens in data/tokens.json
-- Refresh tokens before expiry (cron job every 30 minutes)
-- Handle refresh_token expiry (notify user to re-authenticate)
+### 3. OAuth Polling (bin/oauth-poll.pl)
+- Polls BMW `/gcdm/oauth/token` for authorization completion
+- Saves access_token, id_token, refresh_token, gcid to data/tokens.json
+- Returns success/pending/error status
 
-### 4. Cron Jobs (cron/crontab)
-```
-# Refresh BMW CarData tokens every 30 minutes
-*/30 * * * * loxberry /opt/loxberry/bin/plugins/loxberry-bmw-cardata/token-manager.pl refresh
-```
+### 4. Token Manager (bin/token-manager.pl)
+- Commands: `check`, `refresh`, `status`
+- Checks token expiry (refresh if < 5 minutes remaining)
+- Refreshes tokens using refresh_token
+- Called by cron/cron.30min every 30 minutes
 
-### 5. Data Storage Structure
+### 5. MQTT Bridge Daemon (bin/bmw-cardata-bridge.pl)
+- Runs as daemon process (--daemon flag)
+- Uses AnyEvent::MQTT for BMW CarData connection (MQTTS)
+- Uses Net::MQTT::Simple for LoxBerry MQTT Gateway
+- Subscribes to BMW topics: `<gcid>/<vin>`
+- Forwards messages to LoxBerry with configurable topic prefix
+- Monitors tokens.json file every 5 minutes for changes
+- Auto-reconnects when new id_token detected (refreshed by cron job)
+- Does NOT refresh tokens itself (that's the cron job's responsibility)
+- Handles SIGTERM, SIGINT (graceful shutdown), SIGHUP (reload config)
+- Creates PID file in data/bridge.pid
+
+### 6. Data Storage Structure
 **data/tokens.json:**
 ```json
 {
-  "client_id": "...",
   "access_token": "...",
   "id_token": "...",
   "refresh_token": "...",
@@ -353,24 +363,92 @@ This plugin should implement:
 **data/config.json:**
 ```json
 {
-  "vin": "...",
+  "client_id": "...",
   "stream_host": "...",
   "stream_port": 8883,
-  "selected_attributes": ["location", "battery", "tire_pressure"]
+  "stream_username": "...",
+  "vins": ["VIN1", "VIN2"],
+  "mqtt_topic_prefix": "bmw-cardata"
 }
 ```
 
+**data/device_code.json:** (temporary, during OAuth flow)
+```json
+{
+  "device_code": "...",
+  "user_code": "...",
+  "verification_uri": "...",
+  "verification_uri_complete": "...",
+  "interval": 5,
+  "expires_at": 1234567890
+}
+```
+
+**data/pkce.json:** (temporary, during OAuth flow)
+```json
+{
+  "code_verifier": "..."
+}
+```
+
+## LoxBerry Path Placeholders (CRITICAL)
+
+**NEVER use absolute paths in plugin code.** LoxBerry uses placeholders that are automatically replaced during installation:
+
+| Placeholder | Replaced with | Example |
+|-------------|--------------|---------|
+| `REPLACELBPPLUGINDIR` | Plugin directory name | `bmw-cardata` |
+| `REPLACELBPBINDIR` | `/opt/loxberry/bin/plugins/PLUGINNAME` | Plugin executables |
+| `REPLACELBPDATADIR` | `/opt/loxberry/data/plugins/PLUGINNAME` | Persistent data |
+| `REPLACELBPLOGDIR` | `/opt/loxberry/log/plugins/PLUGINNAME` | Log files |
+| `REPLACELBPCONFIGDIR` | `/opt/loxberry/config/plugins/PLUGINNAME` | Config files |
+| `REPLACELBPTEMPLDIR` | `/opt/loxberry/templates/plugins/PLUGINNAME` | Templates |
+| `REPLACELBPHTMLAUTHDIR` | `/opt/loxberry/webfrontend/htmlauth/plugins/PLUGINNAME` | Web interface |
+
+**In Perl CGI scripts**, use LoxBerry variables instead:
+- `$lbpbindir` - Binary directory
+- `$lbpdatadir` - Data directory
+- `$lbplogdir` - Log directory
+- `$lbpconfigdir` - Config directory
+- `$lbptemplatedir` - Template directory
+
+**Reference:** https://wiki.loxberry.de/entwickler/plugin_fur_den_loxberry_entwickeln_ab_version_1x/automatisches_ersetzen_der_pluginverzeichnisse_replace
+
 ## Development Notes
 
-- When editing Perl CGI scripts, remember they use LoxBerry's templating system
-- Language strings are stored in templates/lang/ and automatically loaded by LoxBerry::Web::readlanguage()
-- The web interface uses LoxBerry::Web for headers/footers (lbheader/lbfooter)
-- Plugin metadata comes from LoxBerry::System::plugindata() (reads plugin database)
-- Cron jobs run as user 'loxberry' - useful for periodic token refresh
-- Use data/ directory for storing OAuth tokens and configuration
-- Follow conventional commit format for automatic changelog generation (e.g., "feat:", "fix:", "docs:")
-- For MQTT integration, prefer LoxBerry::IO::mqtt_connectiondetails() + UDP or Net::MQTT::Simple
-- BMW MQTT requires SSL/TLS - use Net::MQTT::Simple with mqtts:// protocol
-- Token refresh must happen BEFORE expiry (recommend 50 minutes for 1-hour tokens)
-- Only ONE MQTT connection per GCID allowed - daemon must handle reconnection gracefully
-- Es dürfen keine absoluten Pfade verwendet werden, sondern ausschließlich die Platthalter, die in https://wiki.loxberry.de/entwickler/plugin_fur_den_loxberry_entwickeln_ab_version_1x/automatisches_ersetzen_der_pluginverzeichnisse_replace definiert sind. Sie werden bei der Installation automatisch überschrieben.
+### Code Structure
+- Perl CGI scripts use LoxBerry's templating system (HTML::Template)
+- Language strings stored in templates/lang/ (loaded via LoxBerry::Web::readlanguage())
+- Web interface uses LoxBerry::Web for headers/footers (lbheader/lbfooter)
+- Plugin metadata from LoxBerry::System::plugindata()
+
+### Important Constraints
+- **Path Placeholders**: ALWAYS use REPLACE* placeholders or LoxBerry variables, NEVER hardcoded paths
+- **MQTT Connection**: Only ONE BMW MQTT connection per GCID allowed
+- **Token Timing**: Refresh tokens BEFORE expiry (current: 5 min margin for 1-hour tokens)
+- **SSL/TLS**: BMW MQTT requires mqtts:// protocol
+- **Cron User**: All cron jobs run as 'loxberry' user, not root
+- **Commit Format**: Use conventional commits (feat:, fix:, docs:) for changelog generation
+- **Separation of Concerns**: Bridge daemon does NOT refresh tokens - it only detects when cron job has refreshed them and reconnects
+
+### Testing & Debugging
+- Test OAuth flow: Run `bin/oauth-init.pl` manually, then `bin/oauth-poll.pl`
+- Test token refresh: `bin/token-manager.pl check` or `bin/token-manager.pl refresh --force`
+- Test bridge: `bin/bmw-cardata-bridge.pl` (without --daemon for foreground mode)
+- Check logs in data directory (tokens.json, config.json, device_code.json)
+- Bridge PID file: `data/bridge.pid`
+- LoxBerry logs: Use LoxBerry::Log module (LOGSTART, LOGINF, LOGERR, LOGEND)
+
+### MQTT Integration Options
+1. **UDP Method** (recommended for simple publishing):
+   ```perl
+   use LoxBerry::IO;
+   my $creds = LoxBerry::IO::mqtt_connectiondetails();
+   # Send to UDP port: "topic payload"
+   ```
+
+2. **Direct Connection** (for subscribing):
+   ```perl
+   use Net::MQTT::Simple;
+   my $mqtt = Net::MQTT::Simple->new($broker);
+   ```

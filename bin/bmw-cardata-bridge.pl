@@ -254,7 +254,7 @@ sub check_and_refresh_tokens {
 
     return unless -f $tokens_file;
 
-    # Wrap file operations in eval
+    # Reload tokens from file (cron job updates this file)
     my $tokens;
     eval {
         $tokens = load_json($tokens_file);
@@ -265,47 +265,33 @@ sub check_and_refresh_tokens {
     }
     return unless $tokens;
 
+    # Check if tokens have been refreshed (by comparing id_token)
+    my $old_id_token = $current_tokens->{id_token} || '';
+    my $new_id_token = $tokens->{id_token} || '';
+
+    if ($old_id_token ne $new_id_token && $new_id_token ne '') {
+        LOGOK("New id_token detected - cron job has refreshed tokens");
+        $current_tokens = $tokens;
+
+        # Trigger reconnection to use new id_token
+        LOGINF("Triggering reconnect to use new id_token...");
+        $connection_active = 0;
+        # Exit event loop to trigger reconnection in main loop
+        $mqtt_cv->send if $mqtt_cv;
+        return;
+    }
+
+    # Log token status
     my $now = time();
     my $expires_at = $tokens->{expires_at} || 0;
     my $time_left = $expires_at - $now;
 
     if ($time_left < TOKEN_REFRESH_MARGIN) {
-        LOGINF("Token expires soon (${time_left}s left), triggering refresh...");
-
-        # Call token-manager.pl to refresh
-        my $token_manager = "$bin_dir/token-manager.pl";
-        if (-x $token_manager) {
-            # Wrap system call in eval
-            my $result;
-            eval {
-                $result = system($token_manager, 'check');
-            };
-            if ($@) {
-                LOGERR("Error calling token-manager.pl: $@");
-                return;
-            }
-
-            if ($result == 0) {
-                LOGOK("Token refresh successful - new id_token available");
-                # Reload tokens with error handling
-                eval {
-                    $current_tokens = load_json($tokens_file);
-                };
-                if ($@) {
-                    LOGERR("Failed to reload tokens after refresh: $@");
-                    return;
-                }
-                # Trigger reconnection to use new id_token
-                LOGINF("Triggering reconnect to use new id_token...");
-                $connection_active = 0;
-                # Exit event loop to trigger reconnection in main loop
-                $mqtt_cv->send if $mqtt_cv;
-            } else {
-                LOGERR("Token refresh failed with exit code: $result");
-            }
-        } else {
-            LOGERR("token-manager.pl not found or not executable: $token_manager");
-        }
+        LOGWARN("Token expires soon (${time_left}s left) - waiting for cron job to refresh");
+    } elsif ($time_left < 0) {
+        LOGERR("Token has expired (${time_left}s ago) - waiting for cron job to refresh");
+    } else {
+        LOGDEB("Token valid for " . int($time_left / 60) . " minutes");
     }
 }
 

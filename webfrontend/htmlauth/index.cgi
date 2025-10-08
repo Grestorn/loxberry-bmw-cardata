@@ -311,10 +311,7 @@ sub prepare_template_vars {
     # Logs - separate pages for each log type
     if ($page eq 'bridge_logs') {
         # Bridge logs page
-        my $bridge_loglist_html = LoxBerry::Web::loglist_html(
-            NAME => 'bmw-cardata-bridge',
-            PACKAGE => $lbpplugindir
-        );
+        my $bridge_loglist_html = LoxBerry::Web::loglist_html();
         $template->param('BRIDGE_LOGLIST_HTML' => $bridge_loglist_html);
     }
     elsif ($page eq 'token_logs') {
