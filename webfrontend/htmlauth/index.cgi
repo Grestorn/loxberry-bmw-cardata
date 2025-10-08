@@ -175,6 +175,12 @@ sub handle_check_oauth {
     if ($exit_code == 0) {
         $template->param('OAUTH_POLL_SUCCESS' => 1);
         $template->param('OAUTH_POLL_LOG_BUTTON' => $log_button);
+
+        # Auto-start bridge after successful registration
+        my $bridge_status = get_bridge_status();
+        unless ($bridge_status->{running}) {
+            system("$bin_dir/bridge-control.sh start >/dev/null 2>&1");
+        }
     } else {
         $template->param('OAUTH_POLL_ERROR' => 1);
         $template->param('OAUTH_POLL_LOG_BUTTON' => $log_button);

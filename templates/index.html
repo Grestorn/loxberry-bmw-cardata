@@ -71,17 +71,6 @@
             <p><span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em; color: green;"></span>
             <strong><TMPL_VAR STATUS.AUTHENTICATED></strong></p>
 
-            <TMPL_IF ACCESS_TOKEN>
-            <p><TMPL_VAR STATUS.CURRENT_ACCESS_TOKEN>: <strong style="font-family: monospace; word-break: break-all;"><TMPL_VAR ACCESS_TOKEN></strong></p>
-            </TMPL_IF>
-
-            <TMPL_IF ID_TOKEN>
-            <div style="margin: 15px 0;">
-                <p style="margin: 0 0 5px 0;"><strong><TMPL_VAR STATUS.CURRENT_ID_TOKEN>:</strong></p>
-                <textarea readonly style="width: 100%; max-width: 700px; height: 100px; font-family: monospace; font-size: 11px; resize: vertical;"><TMPL_VAR ID_TOKEN></textarea>
-            </div>
-            </TMPL_IF>
-
             <p><TMPL_VAR STATUS.TOKEN_EXPIRES>: <strong><TMPL_VAR TOKEN_EXPIRES_MINUTES></strong> <TMPL_VAR STATUS.MINUTES></p>
             <p><TMPL_VAR STATUS.REFRESH_VALID>: <strong><TMPL_VAR REFRESH_EXPIRES_DAYS></strong> <TMPL_VAR STATUS.DAYS></p>
 
@@ -103,17 +92,6 @@
         <TMPL_IF AUTH_EXPIRED>
             <p><span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em; color: orange;"></span>
             <strong><TMPL_VAR STATUS.TOKEN_EXPIRED></strong></p>
-
-            <TMPL_IF ACCESS_TOKEN>
-            <p><TMPL_VAR STATUS.CURRENT_ACCESS_TOKEN>: <strong style="font-family: monospace; word-break: break-all;"><TMPL_VAR ACCESS_TOKEN></strong></p>
-            </TMPL_IF>
-
-            <TMPL_IF ID_TOKEN>
-            <div style="margin: 15px 0;">
-                <p style="margin: 0 0 5px 0;"><strong><TMPL_VAR STATUS.CURRENT_ID_TOKEN>:</strong></p>
-                <textarea readonly style="width: 100%; max-width: 700px; height: 100px; font-family: monospace; font-size: 11px; resize: vertical;"><TMPL_VAR ID_TOKEN></textarea>
-            </div>
-            </TMPL_IF>
 
             <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #ff6600;">
                 <TMPL_VAR STATUS.TOKEN_EXPIRED_HINT>
@@ -204,6 +182,48 @@
 </div>
 </TMPL_IF>
 
+<!-- Bridge Control -->
+<TMPL_IF AUTH_VALID>
+<TMPL_IF CONFIG_COMPLETE>
+<h2><TMPL_VAR BRIDGE.TITLE></h2>
+<div class="ui-widget" style="margin-bottom: 20px;">
+    <div class="ui-widget-content ui-corner-all" style="padding: 15px;">
+        <p><TMPL_VAR BRIDGE.STATUS>:
+            <TMPL_IF BRIDGE_RUNNING>
+                <strong style="color: green;"><TMPL_VAR BRIDGE.RUNNING></strong> (PID: <TMPL_VAR BRIDGE_PID>)
+            <TMPL_ELSE>
+                <strong style="color: red;"><TMPL_VAR BRIDGE.STOPPED></strong>
+            </TMPL_IF>
+        </p>
+
+        <div style="margin-top: 15px;">
+            <TMPL_IF BRIDGE_RUNNING>
+                <form method="post" action="index.cgi" style="display: inline;">
+                    <input type="hidden" name="action" value="stop_bridge">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all">
+                        <TMPL_VAR BRIDGE.STOP_BUTTON>
+                    </button>
+                </form>
+                <form method="post" action="index.cgi" style="display: inline;">
+                    <input type="hidden" name="action" value="restart_bridge">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all">
+                        <TMPL_VAR BRIDGE.RESTART_BUTTON>
+                    </button>
+                </form>
+            <TMPL_ELSE>
+                <form method="post" action="index.cgi" style="display: inline;">
+                    <input type="hidden" name="action" value="start_bridge">
+                    <button type="submit" class="ui-button ui-widget ui-corner-all">
+                        <TMPL_VAR BRIDGE.START_BUTTON>
+                    </button>
+                </form>
+            </TMPL_IF>
+        </div>
+    </div>
+</div>
+</TMPL_IF>
+</TMPL_IF>
+
 <!-- Configuration -->
 <h2><TMPL_VAR CONFIG.TITLE></h2>
 <form method="post" action="index.cgi">
@@ -259,48 +279,6 @@
         </div>
     </div>
 </form>
-
-<!-- Bridge Control -->
-<TMPL_IF AUTH_VALID>
-<TMPL_IF CONFIG_COMPLETE>
-<h2><TMPL_VAR BRIDGE.TITLE></h2>
-<div class="ui-widget" style="margin-bottom: 20px;">
-    <div class="ui-widget-content ui-corner-all" style="padding: 15px;">
-        <p><TMPL_VAR BRIDGE.STATUS>:
-            <TMPL_IF BRIDGE_RUNNING>
-                <strong style="color: green;"><TMPL_VAR BRIDGE.RUNNING></strong> (PID: <TMPL_VAR BRIDGE_PID>)
-            <TMPL_ELSE>
-                <strong style="color: red;"><TMPL_VAR BRIDGE.STOPPED></strong>
-            </TMPL_IF>
-        </p>
-
-        <div style="margin-top: 15px;">
-            <TMPL_IF BRIDGE_RUNNING>
-                <form method="post" action="index.cgi" style="display: inline;">
-                    <input type="hidden" name="action" value="stop_bridge">
-                    <button type="submit" class="ui-button ui-widget ui-corner-all">
-                        <TMPL_VAR BRIDGE.STOP_BUTTON>
-                    </button>
-                </form>
-                <form method="post" action="index.cgi" style="display: inline;">
-                    <input type="hidden" name="action" value="restart_bridge">
-                    <button type="submit" class="ui-button ui-widget ui-corner-all">
-                        <TMPL_VAR BRIDGE.RESTART_BUTTON>
-                    </button>
-                </form>
-            <TMPL_ELSE>
-                <form method="post" action="index.cgi" style="display: inline;">
-                    <input type="hidden" name="action" value="start_bridge">
-                    <button type="submit" class="ui-button ui-widget ui-corner-all">
-                        <TMPL_VAR BRIDGE.START_BUTTON>
-                    </button>
-                </form>
-            </TMPL_IF>
-        </div>
-    </div>
-</div>
-</TMPL_IF>
-</TMPL_IF>
 
 </TMPL_IF>
 

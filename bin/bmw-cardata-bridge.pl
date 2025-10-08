@@ -55,6 +55,10 @@ my $last_token_check = 0;
 my $connection_active = 0;
 my $reconnect_delay = RECONNECT_DELAY_INITIAL;  # Current reconnect delay (exponential backoff)
 
+# Message counters
+my $messages_total = 0;           # Total messages since bridge started
+my $messages_since_last_report = 0;  # Messages since last report
+
 # Initialize logging
 my $log = LoxBerry::Log->new(
     name => 'bmw-cardata-bridge',
@@ -143,6 +147,19 @@ while ($running) {
                 LOGWARN("Token expired despite refresh, triggering reconnect...");
                 $connection_active = 0;
                 $mqtt_cv->send if $mqtt_cv;
+            }
+        }
+    );
+
+    # Set up periodic message count reporting timer (every 1 minute)
+    my $message_report_timer = AnyEvent->timer(
+        after => 60,
+        interval => 60,
+        cb => sub {
+            # Only report if at least one message was forwarded
+            if ($messages_since_last_report > 0) {
+                LOGINF("Forwarded $messages_since_last_report messages in last minute (total: $messages_total)");
+                $messages_since_last_report = 0;
             }
         }
     );
@@ -555,6 +572,10 @@ sub forward_to_loxberry {
     eval {
         $loxberry_mqtt->retain($loxberry_topic, $message);
         LOGDEB("Forwarded to LoxBerry (retained): $loxberry_topic => $message");
+
+        # Increment message counters
+        $messages_total++;
+        $messages_since_last_report++;
     };
 
     if ($@) {
