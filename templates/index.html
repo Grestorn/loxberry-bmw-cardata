@@ -109,7 +109,7 @@
             </form>
 
             <form method="post" action="index.cgi" style="margin-top: 10px; display: inline-block;">
-                <input type="hidden" name="action" value="request_device_code">
+                <input type="hidden" name="action" value="reset_auth">
                 <button type="submit" class="ui-button ui-widget ui-corner-all">
                     <TMPL_VAR OAUTH.RESTART_AUTH_BUTTON>
                 </button>
@@ -138,7 +138,7 @@
                 </form>
 
                 <form method="post" action="index.cgi" style="margin-top: 10px; display: inline-block;">
-                    <input type="hidden" name="action" value="request_device_code">
+                    <input type="hidden" name="action" value="reset_auth">
                     <button type="submit" class="ui-button ui-widget ui-corner-all">
                         <TMPL_VAR OAUTH.RESTART_AUTH_BUTTON>
                     </button>
@@ -147,6 +147,13 @@
         </TMPL_IF>
     </div>
 </div>
+
+<TMPL_IF AUTH_RESET_SUCCESS>
+<div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span>
+    <strong><TMPL_VAR STATUS.AUTH_RESET_SUCCESS></strong>
+</div>
+</TMPL_IF>
 
 <!-- OAuth Authentication -->
 <TMPL_IF AUTH_NONE>

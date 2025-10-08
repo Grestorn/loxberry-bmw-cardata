@@ -56,6 +56,8 @@ if ($action eq 'save_config') {
     handle_check_oauth();
 } elsif ($action eq 'refresh_token') {
     handle_refresh_token();
+} elsif ($action eq 'reset_auth') {
+    handle_reset_auth();
 } elsif ($action eq 'start_bridge') {
     handle_start_bridge();
 } elsif ($action eq 'stop_bridge') {
@@ -114,11 +116,8 @@ sub handle_save_config {
     if ($new_client_id && $new_client_id ne '' && $new_client_id ne $old_client_id) {
         # Only show message if there was a previous client_id (not first time entry)
         if ($old_client_id && $old_client_id ne '') {
-            # Client ID changed - reset OAuth state
-            # Delete existing tokens and OAuth temporary files
-            unlink($tokens_file) if -f $tokens_file;
-            unlink("$data_dir/pkce.json") if -f "$data_dir/pkce.json";
-            unlink("$data_dir/device_code.json") if -f "$data_dir/device_code.json";
+            # Client ID changed - reset OAuth state using shared function
+            reset_authentication_files();
 
             $template->param('CLIENT_ID_CHANGED' => 1);
             $template->param('CLIENT_ID_CHANGE_MESSAGE' => $L{'STATUS.CLIENT_ID_CHANGED_INFO'});
@@ -243,6 +242,27 @@ sub handle_refresh_token {
         $template->param('TOKEN_REFRESH_ERROR' => 1);
         $template->param('TOKEN_REFRESH_LOG_BUTTON' => $log_button);
     }
+}
+
+sub handle_reset_auth {
+    # Reset authentication using shared function
+    reset_authentication_files();
+
+    $template->param('AUTH_RESET_SUCCESS' => 1);
+}
+
+#
+# Helper Functions
+#
+
+sub reset_authentication_files {
+    # Stop the bridge if running
+    system("$bin_dir/bridge-control.sh stop >/dev/null 2>&1");
+
+    # Remove authentication files
+    unlink($tokens_file) if -f $tokens_file;
+    unlink("$data_dir/device_code.json") if -f "$data_dir/device_code.json";
+    unlink("$data_dir/pkce.json") if -f "$data_dir/pkce.json";
 }
 
 #
