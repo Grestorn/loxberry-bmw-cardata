@@ -162,20 +162,18 @@
                 <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_CLIENT_ID></p>
                 </TMPL_UNLESS>
             </li>
-            <li><TMPL_VAR OAUTH.STEP3B>
-                <TMPL_IF OAUTH_VERIFICATION_URI>
-                <a href="<TMPL_VAR OAUTH_VERIFICATION_URI>" target="_blank" class="ui-button ui-widget ui-corner-all" style="margin-top: 10px; display: inline-block; text-decoration: none;">
-                    <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
-                </a>
-                <p style="color: #666; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.CODE_EXPIRES>: <TMPL_VAR OAUTH_EXPIRES_MINUTES> <TMPL_VAR STATUS.MINUTES></p>
-                <TMPL_ELSE>
-                <button type="button" class="ui-button ui-widget ui-corner-all" disabled style="margin-top: 10px;">
+            <li><TMPL_VAR OAUTH.STEP4>
+                <button type="button" class="ui-button ui-widget ui-corner-all" style="margin-top: 10px;"
+                        <TMPL_IF OAUTH_VERIFICATION_URI>onclick="window.open('<TMPL_VAR OAUTH_VERIFICATION_URI>', '_blank')"<TMPL_ELSE>disabled</TMPL_IF>>
                     <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
                 </button>
+                <TMPL_IF OAUTH_VERIFICATION_URI>
+                <p style="color: #666; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.CODE_EXPIRES>: <TMPL_VAR OAUTH_EXPIRES_MINUTES> <TMPL_VAR STATUS.MINUTES></p>
+                <TMPL_ELSE>
                 <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_DEVICE_CODE></p>
                 </TMPL_IF>
             </li>
-            <li><TMPL_VAR OAUTH.STEP4>
+            <li><TMPL_VAR OAUTH.STEP5>
                 <form method="post" action="index.cgi" style="margin-top: 10px;">
                     <input type="hidden" name="action" value="check_oauth">
                     <button type="submit" class="ui-button ui-widget ui-corner-all" <TMPL_UNLESS DEVICE_CODE_EXISTS>disabled</TMPL_UNLESS>>
