@@ -54,6 +54,7 @@ my $current_config;
 my $last_token_check = 0;
 my $connection_active = 0;
 my $reconnect_delay = RECONNECT_DELAY_INITIAL;  # Current reconnect delay (exponential backoff)
+my $token_update_triggered = 0;  # Flag: reconnect triggered by token update
 
 # Message counters
 my $messages_total = 0;           # Total messages since bridge started
@@ -118,19 +119,27 @@ while ($running) {
         LOGERR("Token expired and refresh failed. Waiting $reconnect_delay seconds before retry...");
         sleep($reconnect_delay);
         increase_reconnect_delay();
+        $token_update_triggered = 0;  # Clear flag after failed attempt
         next;
     }
 
     # Connect to BMW CarData MQTT
     unless (connect_to_bmw_mqtt()) {
-        LOGERR("Failed to connect to BMW MQTT. Waiting $reconnect_delay seconds before retry...");
-        sleep($reconnect_delay);
-        increase_reconnect_delay();
+        # If this was triggered by token update, skip delay on first attempt
+        if ($token_update_triggered) {
+            LOGERR("Failed to connect to BMW MQTT after token update. Retrying immediately...");
+            $token_update_triggered = 0;  # Clear flag - next attempts will use delays
+        } else {
+            LOGERR("Failed to connect to BMW MQTT. Waiting $reconnect_delay seconds before retry...");
+            sleep($reconnect_delay);
+            increase_reconnect_delay();
+        }
         next;
     }
 
-    # Connection successful - reset reconnect delay
+    # Connection successful - reset reconnect delay and flags
     $reconnect_delay = RECONNECT_DELAY_INITIAL;
+    $token_update_triggered = 0;  # Clear flag after successful connection
     $connection_active = 1;
     LOGOK("Bridge is active and forwarding messages");
 
@@ -340,6 +349,7 @@ sub check_and_refresh_tokens {
         # Trigger reconnection to use new id_token
         LOGINF("Triggering reconnect to use new id_token...");
         $connection_active = 0;
+        $token_update_triggered = 1;  # Mark as token-triggered reconnect
         # Exit event loop to trigger reconnection in main loop
         $mqtt_cv->send if $mqtt_cv;
         return;
