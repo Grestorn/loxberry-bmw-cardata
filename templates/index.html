@@ -15,99 +15,38 @@
 </div>
 </TMPL_IF>
 
-<TMPL_IF DEVICE_CODE_SUCCESS>
-<div class="ui-state-highlight ui-corner-all" style="padding: 15px; margin-bottom: 20px;">
-    <h3 style="margin-top: 0;"><span class="ui-icon ui-icon-info" style="float: left; margin-right: .3em;"></span> <TMPL_VAR OAUTH.AUTH_REQUIRED_TITLE></h3>
-
-    <p><strong><TMPL_VAR OAUTH.AUTH_INSTRUCTIONS></strong></p>
-
-    <div style="background: #fff; border: 2px solid #0066cc; border-radius: 5px; padding: 15px; margin: 15px 0;">
-        <p style="margin-top: 0;"><strong><TMPL_VAR OAUTH.VERIFICATION_LINK_LABEL>:</strong></p>
-        <p style="margin: 10px 0;">
-            <a href="<TMPL_VAR OAUTH_VERIFICATION_URI>" target="_blank"
-               style="display: inline-block; padding: 12px 20px; background: #0066cc; color: white;
-                      text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">
-                <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
-            </a>
-        </p>
-        <p style="font-size: 12px; color: #666;"><TMPL_VAR OAUTH.LINK_OPENS_NEW_TAB></p>
-    </div>
-
-    <TMPL_IF OAUTH_USER_CODE>
-    <p><strong><TMPL_VAR OAUTH.USER_CODE_LABEL>:</strong> <code style="font-size: 18px; background: #f0f0f0; padding: 5px 10px; border-radius: 3px;"><TMPL_VAR OAUTH_USER_CODE></code></p>
-    </TMPL_IF>
-
-    <p><strong><TMPL_VAR OAUTH.CODE_EXPIRES>:</strong> <TMPL_VAR OAUTH_EXPIRES_MINUTES> <TMPL_VAR STATUS.MINUTES></p>
-
-    <div style="background: #fffbcc; border-left: 4px solid #ffcc00; padding: 10px; margin: 15px 0;">
-        <p style="margin: 0;"><strong><TMPL_VAR OAUTH.NEXT_STEPS>:</strong></p>
-        <ol style="margin: 10px 0 0 20px; padding: 0;">
-            <li><TMPL_VAR OAUTH.STEP_CLICK_LINK></li>
-            <li><TMPL_VAR OAUTH.STEP_LOGIN_BMW></li>
-            <li><TMPL_VAR OAUTH.STEP_APPROVE></li>
-            <li><TMPL_VAR OAUTH.STEP_RETURN></li>
-        </ol>
-    </div>
-
-    <div style="margin-top: 15px;">
-        <p style="color: #666; font-size: 0.9em;"><TMPL_VAR OAUTH.SHOW_LOG_DETAILS>:</p>
-        <p><TMPL_VAR DEVICE_CODE_LOG_BUTTON></p>
-    </div>
-</div>
-</TMPL_IF>
-
 <TMPL_IF DEVICE_CODE_ERROR>
-<div class="ui-state-error ui-corner-all" style="padding: 15px; margin-bottom: 20px; border: 2px solid #d00;">
-    <h3 style="margin: 0 0 10px 0; color: #d00;">
-        <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
-        <TMPL_VAR STATUS.DEVICE_CODE_ERROR>
-    </h3>
-    <p style="color: #666;"><TMPL_VAR OAUTH.SHOW_LOG_DETAILS>:</p>
-    <p><TMPL_VAR DEVICE_CODE_LOG_BUTTON></p>
+<div class="ui-state-error ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+    <strong><TMPL_VAR STATUS.DEVICE_CODE_ERROR></strong> - <TMPL_VAR OAUTH.CHECK_LOGS>
 </div>
 </TMPL_IF>
 
 <TMPL_IF OAUTH_POLL_SUCCESS>
-<div class="ui-state-highlight ui-corner-all" style="padding: 15px; margin-bottom: 20px; border: 2px solid #4caf50;">
-    <h3 style="margin: 0 0 10px 0; color: #4caf50;">
-        <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em;"></span>
-        <TMPL_VAR STATUS.OAUTH_SUCCESS>
-    </h3>
-    <p style="color: #666;"><TMPL_VAR OAUTH.SHOW_LOG_DETAILS>:</p>
-    <p><TMPL_VAR OAUTH_POLL_LOG_BUTTON></p>
+<div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em; color: green;"></span>
+    <strong><TMPL_VAR STATUS.OAUTH_SUCCESS></strong>
 </div>
 </TMPL_IF>
 
 <TMPL_IF OAUTH_POLL_ERROR>
-<div class="ui-state-error ui-corner-all" style="padding: 15px; margin-bottom: 20px; border: 2px solid #d00;">
-    <h3 style="margin: 0 0 10px 0; color: #d00;">
-        <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
-        <TMPL_VAR STATUS.OAUTH_POLL_ERROR>
-    </h3>
-    <p style="color: #666;"><TMPL_VAR OAUTH.SHOW_LOG_DETAILS>:</p>
-    <p><TMPL_VAR OAUTH_POLL_LOG_BUTTON></p>
+<div class="ui-state-error ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+    <strong><TMPL_VAR STATUS.OAUTH_POLL_ERROR></strong> - <TMPL_VAR OAUTH.CHECK_LOGS>
 </div>
 </TMPL_IF>
 
 <TMPL_IF TOKEN_REFRESH_SUCCESS>
-<div class="ui-state-highlight ui-corner-all" style="padding: 15px; margin-bottom: 20px; border: 2px solid #4caf50;">
-    <h3 style="margin: 0 0 10px 0; color: #4caf50;">
-        <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em;"></span>
-        <TMPL_VAR STATUS.TOKEN_REFRESH_SUCCESS>
-    </h3>
-    <p style="color: #666;"><TMPL_VAR OAUTH.SHOW_LOG_DETAILS>:</p>
-    <p><TMPL_VAR TOKEN_REFRESH_LOG_BUTTON></p>
+<div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em; color: green;"></span>
+    <strong><TMPL_VAR STATUS.TOKEN_REFRESH_SUCCESS></strong>
 </div>
 </TMPL_IF>
 
 <TMPL_IF TOKEN_REFRESH_ERROR>
-<div class="ui-state-error ui-corner-all" style="padding: 15px; margin-bottom: 20px; border: 2px solid #d00;">
-    <h3 style="margin: 0 0 10px 0; color: #d00;">
-        <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
-        <TMPL_VAR STATUS.TOKEN_REFRESH_ERROR>
-    </h3>
-    <p style="color: #666;"><TMPL_VAR OAUTH.SHOW_LOG_DETAILS>:</p>
-    <p><TMPL_VAR TOKEN_REFRESH_LOG_BUTTON></p>
+<div class="ui-state-error ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span class="ui-icon ui-icon-alert" style="float: left; margin-right: .3em;"></span>
+    <strong><TMPL_VAR STATUS.TOKEN_REFRESH_ERROR></strong> - <TMPL_VAR OAUTH.CHECK_LOGS>
 </div>
 </TMPL_IF>
 
@@ -223,6 +162,19 @@
                 <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_CLIENT_ID></p>
                 </TMPL_UNLESS>
             </li>
+            <li><TMPL_VAR OAUTH.STEP3B>
+                <TMPL_IF OAUTH_VERIFICATION_URI>
+                <a href="<TMPL_VAR OAUTH_VERIFICATION_URI>" target="_blank" class="ui-button ui-widget ui-corner-all" style="margin-top: 10px; display: inline-block; text-decoration: none;">
+                    <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
+                </a>
+                <p style="color: #666; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.CODE_EXPIRES>: <TMPL_VAR OAUTH_EXPIRES_MINUTES> <TMPL_VAR STATUS.MINUTES></p>
+                <TMPL_ELSE>
+                <button type="button" class="ui-button ui-widget ui-corner-all" disabled style="margin-top: 10px;">
+                    <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
+                </button>
+                <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_DEVICE_CODE></p>
+                </TMPL_IF>
+            </li>
             <li><TMPL_VAR OAUTH.STEP4>
                 <form method="post" action="index.cgi" style="margin-top: 10px;">
                     <input type="hidden" name="action" value="check_oauth">
@@ -231,7 +183,7 @@
                     </button>
                 </form>
                 <TMPL_UNLESS DEVICE_CODE_EXISTS>
-                <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_DEVICE_CODE></p>
+                <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_VERIFICATION></p>
                 </TMPL_UNLESS>
             </li>
         </ol>

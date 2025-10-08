@@ -236,6 +236,16 @@ sub prepare_template_vars {
 
         $template->param('DEVICE_CODE_EXISTS' => 1);
         $template->param('DEVICE_CODE_VALID' => $device_code_valid);
+
+        # Set verification URI for OAuth flow (always shown in step list)
+        my $verification_uri = $device_code_data->{verification_uri_complete} || $device_code_data->{verification_uri};
+        if ($verification_uri) {
+            $template->param('OAUTH_VERIFICATION_URI' => $verification_uri);
+
+            # Calculate minutes until expiry
+            my $expires_in = $device_code_data->{expires_in} || 0;
+            $template->param('OAUTH_EXPIRES_MINUTES' => int($expires_in / 60));
+        }
     }
 
     # Authentication status

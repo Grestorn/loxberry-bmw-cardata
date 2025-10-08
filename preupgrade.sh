@@ -57,7 +57,7 @@ if [ -f "$PDATA/bridge.pid" ]; then
         BRIDGE_WAS_RUNNING=1
 
         # Save state for postupgrade BEFORE backup
-        echo "1" > "$PDATA/.bridge_was_running"
+        echo "1" > "$PDATA/_bridge_was_running"
 
         # Stop the bridge
         echo "<INFO> BMW CarData: Stopping MQTT bridge daemon..."
@@ -84,7 +84,7 @@ if [ -f "$PDATA/bridge.pid" ]; then
 else
     echo "<INFO> BMW CarData: Bridge is not running"
     # Make sure state file doesn't exist
-    rm -f "$PDATA/.bridge_was_running"
+    rm -f "$PDATA/_bridge_was_running"
 fi
 
 echo "<INFO> Creating temporary folders for upgrading"
@@ -94,9 +94,9 @@ mkdir -p $PTEMPPATH/upgrade/data
 mkdir -p $PTEMPPATH/upgrade/logs
 
 echo "<INFO> Backing up existing config files"
-cp -p -v -r $PCONFIG/ $PTEMPPATH/upgrade/config
-cp -p -v -r $PDATA/ $PTEMPPATH/upgrade/data
-cp -p -v -r $PLOGS/ $PTEMPPATH/upgrade/logs
+cp -p -v -r $PCONFIG/* $PTEMPPATH/upgrade/config
+cp -p -v -r $PDATA/* $PTEMPPATH/upgrade/data
+cp -p -v -r $PLOGS/* $PTEMPPATH/upgrade/logs
 
 echo "<OK> BMW CarData: Pre-upgrade completed"
 

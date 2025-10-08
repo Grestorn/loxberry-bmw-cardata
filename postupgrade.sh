@@ -47,9 +47,9 @@ PSBIN=$LBPSBIN/$PDIR
 PBIN=$LBPBIN/$PDIR
 
 echo "<INFO> Copy back existing backup"
-cp -p -v -r $PTEMPPATH/upgrade/config/ $PCONFIG
-cp -p -v -r $PTEMPPATH/upgrade/data/ $PDATA
-cp -p -v -r $PTEMPPATH/upgrade/logs/ $PLOGS
+cp -p -v -r $PTEMPPATH/upgrade/config/* $PCONFIG
+cp -p -v -r $PTEMPPATH/upgrade/data/* $PDATA
+cp -p -v -r $PTEMPPATH/upgrade/logs/* $PLOGS
 
 echo "<INFO> Remove temporary folders"
 rm -r $PTEMPPATH/upgrade
@@ -57,7 +57,7 @@ rm -r $PTEMPPATH/upgrade
 # Restart bridge if it was running before upgrade
 echo "<INFO> BMW CarData: Checking if bridge should be restarted..."
 
-if [ -f "$PDATA/.bridge_was_running" ]; then
+if [ -f "$PDATA/_bridge_was_running" ]; then
     echo "<INFO> BMW CarData: Bridge was running before upgrade, restarting..."
 
     # Start bridge via bridge-control.sh
@@ -73,7 +73,7 @@ if [ -f "$PDATA/.bridge_was_running" ]; then
     fi
 
     # Remove state file
-    rm -f "$PDATA/.bridge_was_running"
+    rm -f "$PDATA/_bridge_was_running"
 else
     echo "<INFO> BMW CarData: Bridge was not running before upgrade, not starting"
 fi
