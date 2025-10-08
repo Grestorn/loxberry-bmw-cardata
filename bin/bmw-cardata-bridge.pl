@@ -116,24 +116,13 @@ while ($running) {
 
     # Check if tokens are still valid
     if (token_expired()) {
-        LOGERR("Token expired and refresh failed. Waiting $reconnect_delay seconds before retry...");
-        sleep($reconnect_delay);
-        increase_reconnect_delay();
-        $token_update_triggered = 0;  # Clear flag after failed attempt
+        LOGERR("Token expired and refresh failed.");
         next;
     }
 
     # Connect to BMW CarData MQTT
     unless (connect_to_bmw_mqtt()) {
-        # If this was triggered by token update, skip delay on first attempt
-        if ($token_update_triggered) {
-            LOGERR("Failed to connect to BMW MQTT after token update. Retrying immediately...");
-            $token_update_triggered = 0;  # Clear flag - next attempts will use delays
-        } else {
-            LOGERR("Failed to connect to BMW MQTT. Waiting $reconnect_delay seconds before retry...");
-            sleep($reconnect_delay);
-            increase_reconnect_delay();
-        }
+        LOGERR("Failed to connect to BMW MQTT.");
         next;
     }
 
@@ -154,6 +143,7 @@ while ($running) {
             # Check if token was refreshed - if so, trigger reconnect
             if (token_expired()) {
                 LOGWARN("Token expired despite refresh, triggering reconnect...");
+                $token_update_triggered = 1;
                 $connection_active = 0;
                 $mqtt_cv->send if $mqtt_cv;
             }
@@ -201,9 +191,15 @@ while ($running) {
     }
 
     # Wait before reconnecting (with exponential backoff)
-    LOGINF("Connection lost. Waiting $reconnect_delay seconds before reconnecting...");
-    sleep($reconnect_delay);
-    increase_reconnect_delay();
+    # Skip delay if reconnect was triggered by token update
+    if ($token_update_triggered) {
+        LOGINF("Connection lost after token update. Retrying immediately...");
+        $token_update_triggered = 0;  # Clear flag - next attempts will use normal delays
+    } else {
+        LOGINF("Connection lost. Waiting $reconnect_delay seconds before reconnecting...");
+        sleep($reconnect_delay);
+        increase_reconnect_delay();
+    }
 }
 
 # Final cleanup
