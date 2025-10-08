@@ -47,9 +47,9 @@ PSBIN=$LBPSBIN/$PDIR
 PBIN=$LBPBIN/$PDIR
 
 echo "<INFO> Copy back existing backup"
-cp -p -v -r $PTEMPPATH/upgrade/config/* $PCONFIG
-cp -p -v -r $PTEMPPATH/upgrade/data/* $PDATA
-cp -p -v -r $PTEMPPATH/upgrade/logs/* $PLOGS
+cp -p -v -r $PTEMPPATH/upgrade/config/ $PCONFIG
+cp -p -v -r $PTEMPPATH/upgrade/data/ $PDATA
+cp -p -v -r $PTEMPPATH/upgrade/logs/ $PLOGS
 
 echo "<INFO> Remove temporary folders"
 rm -r $PTEMPPATH/upgrade

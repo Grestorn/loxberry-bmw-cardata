@@ -35,10 +35,8 @@ my $helptemplate = "help.html";
 our %navbar;
 $navbar{10}{Name} = $L{'NAVIGATION.MAIN'};
 $navbar{10}{URL} = 'index.cgi';
-$navbar{20}{Name} = $L{'NAVIGATION.BRIDGE_LOGS'};
-$navbar{20}{URL} = 'index.cgi?page=bridge_logs';
-$navbar{30}{Name} = $L{'NAVIGATION.TOKEN_LOGS'};
-$navbar{30}{URL} = 'index.cgi?page=token_logs';
+$navbar{20}{Name} = $L{'NAVIGATION.LOGS'};
+$navbar{20}{URL} = 'index.cgi?page=logs';
 
 # File paths
 my $data_dir = "$lbpdatadir";
@@ -227,8 +225,7 @@ sub prepare_template_vars {
 
     # Current page
     $template->param('PAGE_MAIN' => $page eq 'main');
-    $template->param('PAGE_BRIDGE_LOGS' => $page eq 'bridge_logs');
-    $template->param('PAGE_TOKEN_LOGS' => $page eq 'token_logs');
+    $template->param('PAGE_LOGS' => $page eq 'logs');
 
     # Device code status
     if ($device_code_data && exists $device_code_data->{device_code}) {
@@ -309,18 +306,10 @@ sub prepare_template_vars {
     $template->param('BRIDGE_PID' => $bridge_status->{pid} || 'N/A');
 
     # Logs - separate pages for each log type
-    if ($page eq 'bridge_logs') {
+    if ($page eq 'logs') {
         # Bridge logs page
-        my $bridge_loglist_html = LoxBerry::Web::loglist_html();
-        $template->param('BRIDGE_LOGLIST_HTML' => $bridge_loglist_html);
-    }
-    elsif ($page eq 'token_logs') {
-        # Token manager logs page
-        my $token_loglist_html = LoxBerry::Web::loglist_html(
-            NAME => 'token-manager',
-            PACKAGE => $lbpplugindir
-        );
-        $template->param('TOKEN_LOGLIST_HTML' => $token_loglist_html);
+        my $loglist_html = LoxBerry::Web::loglist_html();
+        $template->param('LOGLIST_HTML' => $loglist_html);
     }
 }
 

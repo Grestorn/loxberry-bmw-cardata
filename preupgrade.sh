@@ -94,9 +94,9 @@ mkdir -p $PTEMPPATH/upgrade/data
 mkdir -p $PTEMPPATH/upgrade/logs
 
 echo "<INFO> Backing up existing config files"
-cp -p -v -r $PCONFIG/* $PTEMPPATH/upgrade/config
-cp -p -v -r $PDATA/* $PTEMPPATH/upgrade/data
-cp -p -v -r $PLOGS/* $PTEMPPATH/upgrade/logs
+cp -p -v -r $PCONFIG/ $PTEMPPATH/upgrade/config
+cp -p -v -r $PDATA/ $PTEMPPATH/upgrade/data
+cp -p -v -r $PLOGS/ $PTEMPPATH/upgrade/logs
 
 echo "<OK> BMW CarData: Pre-upgrade completed"
 

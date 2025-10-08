@@ -452,3 +452,4 @@ The plugin consists of four main Perl scripts:
    use Net::MQTT::Simple;
    my $mqtt = Net::MQTT::Simple->new($broker);
    ```
+- Before doing any plannings or modifications, always check for changes first. I always change files myself to improve the code.

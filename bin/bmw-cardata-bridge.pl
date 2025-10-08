@@ -21,10 +21,11 @@ use LoxBerry::Log;
 
 # Configuration
 use constant {
-    BMW_MQTT_PROTOCOL => 'mqtts',     # MQTT over SSL/TLS
-    RECONNECT_DELAY => 900,            # Seconds to wait before reconnect (15 minutes)
-    TOKEN_CHECK_INTERVAL => 300,       # Check token expiry every 5 minutes
-    TOKEN_REFRESH_MARGIN => 600,       # Refresh when < 10 minutes left
+    BMW_MQTT_PROTOCOL => 'mqtts',         # MQTT over SSL/TLS
+    RECONNECT_DELAY_INITIAL => 10,        # Initial reconnect delay: 10 seconds
+    RECONNECT_DELAY_MAX => 86400,         # Maximum reconnect delay: 24 hours
+    TOKEN_CHECK_INTERVAL => 300,          # Check token expiry every 5 minutes
+    TOKEN_REFRESH_MARGIN => 600,          # Refresh when < 10 minutes left
 };
 
 # Plugin directories
@@ -52,6 +53,7 @@ my $current_tokens;
 my $current_config;
 my $last_token_check = 0;
 my $connection_active = 0;
+my $reconnect_delay = RECONNECT_DELAY_INITIAL;  # Current reconnect delay (exponential backoff)
 
 # Initialize logging
 my $log = LoxBerry::Log->new(
@@ -109,18 +111,22 @@ while ($running) {
 
     # Check if tokens are still valid
     if (token_expired()) {
-        LOGERR("Token expired and refresh failed. Waiting before retry...");
-        sleep(RECONNECT_DELAY);
+        LOGERR("Token expired and refresh failed. Waiting $reconnect_delay seconds before retry...");
+        sleep($reconnect_delay);
+        increase_reconnect_delay();
         next;
     }
 
     # Connect to BMW CarData MQTT
     unless (connect_to_bmw_mqtt()) {
-        LOGERR("Failed to connect to BMW MQTT. Waiting " . RECONNECT_DELAY . " seconds before retry...");
-        sleep(RECONNECT_DELAY);
+        LOGERR("Failed to connect to BMW MQTT. Waiting $reconnect_delay seconds before retry...");
+        sleep($reconnect_delay);
+        increase_reconnect_delay();
         next;
     }
 
+    # Connection successful - reset reconnect delay
+    $reconnect_delay = RECONNECT_DELAY_INITIAL;
     $connection_active = 1;
     LOGOK("Bridge is active and forwarding messages");
 
@@ -168,15 +174,56 @@ while ($running) {
         last;
     }
 
-    # Wait before reconnecting
-    LOGINF("Connection lost. Waiting " . RECONNECT_DELAY . " seconds before reconnecting...");
-    sleep(RECONNECT_DELAY);
+    # Wait before reconnecting (with exponential backoff)
+    LOGINF("Connection lost. Waiting $reconnect_delay seconds before reconnecting...");
+    sleep($reconnect_delay);
+    increase_reconnect_delay();
 }
 
 # Final cleanup
 LOGINF("=== BMW CarData MQTT Bridge Stopped ===");
 LOGEND;
 exit 0;
+
+#
+# Reconnection Backoff
+#
+
+sub increase_reconnect_delay {
+    my $old_delay = $reconnect_delay;
+
+    # Double the delay
+    $reconnect_delay *= 2;
+
+    # Cap at maximum (24 hours)
+    if ($reconnect_delay > RECONNECT_DELAY_MAX) {
+        $reconnect_delay = RECONNECT_DELAY_MAX;
+    }
+
+    # Log the change
+    if ($old_delay != $reconnect_delay) {
+        my $old_readable = format_duration($old_delay);
+        my $new_readable = format_duration($reconnect_delay);
+        LOGDEB("Increasing reconnect delay: $old_readable -> $new_readable");
+    }
+}
+
+sub format_duration {
+    my ($seconds) = @_;
+
+    if ($seconds < 60) {
+        return "${seconds}s";
+    } elsif ($seconds < 3600) {
+        my $minutes = int($seconds / 60);
+        return "${minutes}m";
+    } elsif ($seconds < 86400) {
+        my $hours = int($seconds / 3600);
+        return "${hours}h";
+    } else {
+        my $days = int($seconds / 86400);
+        return "${days}d";
+    }
+}
 
 #
 # Configuration Management
@@ -374,9 +421,6 @@ sub connect_to_bmw_mqtt {
 
     LOGINF("Connecting to mqtts://$host:$port");
     LOGINF("MQTT Username: $stream_username");
-    LOGINF("ID Token (first 50 chars): " . substr($id_token, 0, 50) . "...");
-    LOGINF("ID Token (last 50 chars): ..." . substr($id_token, -50));
-    LOGDEB("Full ID Token: $id_token");
 
     # Wrap all MQTT operations in eval to catch errors
     eval {
@@ -464,7 +508,6 @@ sub connect_to_bmw_mqtt {
         }
 
         LOGOK("Subscriptions registered");
-        LOGINF("Note: Actual connection happens asynchronously in event loop");
     };
 
     if ($@) {
@@ -493,9 +536,19 @@ sub forward_to_loxberry {
 
     return unless $loxberry_mqtt;
 
-    # Transform topic if prefix is configured
+    # Remove username from topic (BMW format: <username>/<vin>)
+    # We only want the VIN part for LoxBerry
+    my $stream_username = $current_config->{stream_username} || '';
+    my $topic_without_username = $topic;
+
+    if ($stream_username && $topic =~ /^\Q$stream_username\E\/(.+)$/) {
+        $topic_without_username = $1;  # Extract everything after username/
+        LOGDEB("Stripped username from topic: $topic -> $topic_without_username");
+    }
+
+    # Transform topic with prefix
     my $prefix = $current_config->{mqtt_topic_prefix} || 'bmw';
-    my $loxberry_topic = "$prefix/$topic";
+    my $loxberry_topic = "$prefix/$topic_without_username";
 
     # Publish to LoxBerry MQTT Gateway with retain flag
     # Using retain() ensures the last value is stored permanently by the broker
