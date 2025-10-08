@@ -103,7 +103,7 @@ Die Daten werden von BMW in Echtzeit übertragen, sobald sich einer der Werte ä
 
 #### Schritt 5: Plugin-Konfiguration vervollständigen
 
-1. Öffnen Sie das Plugin im LoxBerry
+um1. Öffnen Sie das Plugin im LoxBerry
 2. Tragen Sie die kopierten Werte ein:
    - **BMW CarData Client-ID** (aus Schritt 2)
    - **MQTT Stream Host** (Standard: `customer.streaming-cardata.bmwgroup.com`)
@@ -133,20 +133,17 @@ Nach dem Speichern der Konfiguration erscheint der Anmeldungsprozess:
 2. Mit **BMW-ID** (E-Mail und Passwort) anmelden
 3. Die **Autorisierungsanfrage bestätigen**
 
-> **⚠️ Wichtig:** Der Code ist zeitlich begrenzt. Die Restzeit wird im Plugin angezeigt.
+> **⚠️ Wichtig:** Der Code ist 5 Minuten gültig. Die Restzeit wird im Plugin angezeigt.
 
-##### 6.3 Automatische Token-Abfrage
+##### 6.3 Tokens abrufen (Schritt 5 im Plugin)
 
-- Das Plugin wartet automatisch auf die erfolgreiche Anmeldung
-- Nach erfolgreicher Authentifizierung werden die Tokens automatisch abgerufen
-- Die **MQTT Bridge wird automatisch gestartet**
-- Sie sehen die Meldung: **"Authentifizierung erfolgreich! Tokens wurden gespeichert."**
+1. Nach erfolgreicher BMW-Anmeldung: zurück zum Plugin
+2. Button **"Tokens abrufen"** klicken
+3. Das Plugin holt die Authentifizierungs-Tokens von BMW ab
+4. Nach erfolgreicher Authentifizierung wird die **MQTT Bridge automatisch gestartet**
+5. Sie sehen die Meldung: **"Authentifizierung erfolgreich! Tokens wurden gespeichert."**
 
-##### 6.4 Bei Timeout
-
-Falls die Anmeldung nicht innerhalb der verfügbaren Zeit abgeschlossen wird:
-- Erscheint eine Fehlermeldung: *"Die Anmeldung wurde nicht innerhalb der verfügbaren Zeit abgeschlossen."*
-- Der Prozess muss ab Schritt 6.1 wiederholt werden
+> **ℹ️ Hinweis:** Falls Sie die BMW-Anmeldung noch nicht abgeschlossen haben, erscheint die Meldung *"Die Anmeldung wurde nicht innerhalb der verfügbaren Zeit abgeschlossen."* - in diesem Fall einfach die BMW-Anmeldung (Schritt 6.2) abschließen und den Button "Tokens abrufen" erneut klicken.
 
 ### MQTT Bridge Status
 
@@ -379,20 +376,17 @@ After saving the configuration, the authentication process appears:
 2. Log in with your **BMW ID** (email and password)
 3. **Confirm the authorization request**
 
-> **⚠️ Important:** The code has a time limit. The remaining time is displayed in the plugin.
+> **⚠️ Important:** The code is valid for 5 minutes. The remaining time is displayed in the plugin.
 
-##### 6.3 Automatic Token Retrieval
+##### 6.3 Retrieve Tokens (Step 5 in Plugin)
 
-- The plugin automatically waits for successful authentication
-- After successful authentication, tokens are automatically retrieved
-- The **MQTT bridge is automatically started**
-- You will see the message: **"Authentication successful! Tokens have been saved."**
+1. After successful BMW authentication: return to the plugin
+2. Click the **"Retrieve Tokens"** button
+3. The plugin retrieves the authentication tokens from BMW
+4. After successful authentication, the **MQTT bridge is automatically started**
+5. You will see the message: **"Authentication successful! Tokens have been saved."**
 
-##### 6.4 In Case of Timeout
-
-If authentication is not completed within the available time:
-- An error message appears: *"Authentication was not completed within the available time."*
-- The process must be repeated from step 6.1
+> **ℹ️ Note:** If you have not yet completed the BMW authentication, the message *"Authentication was not completed within the available time."* will appear - in this case, simply complete the BMW authentication (step 6.2) and click the "Retrieve Tokens" button again.
 
 ### MQTT Bridge Status
 
