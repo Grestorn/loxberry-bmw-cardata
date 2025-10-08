@@ -12,7 +12,7 @@ use LoxBerry::Log;
 use constant {
     API_BASE_URL => 'https://customer.bmwgroup.com',
     TOKEN_ENDPOINT => '/gcdm/oauth/token',
-    REFRESH_MARGIN => 300,  # Refresh tokens 5 minutes before expiry
+    REFRESH_MARGIN => 900,  # Refresh tokens 15 minutes before expiry
 };
 
 # Plugin data directory

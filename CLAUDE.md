@@ -69,7 +69,7 @@ loxberry-bmw-cardata/
 - **cron/**: Cron job definitions and boot scripts
   - `crontab`: Traditional cron format (currently unused, kept for future use)
   - `cron.reboot`: Executed at system boot - starts MQTT bridge daemon
-  - `cron.30min`: Executed every 30 minutes - refreshes OAuth tokens
+  - `cron.10min`: Executed every 10 minutes - refreshes OAuth tokens
   - All scripts run as 'loxberry' user
   - LoxBerry manages scheduling automatically
 
