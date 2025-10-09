@@ -49,17 +49,26 @@ Die Daten werden von BMW in Echtzeit übertragen, sobald sich einer der Werte ä
 
 ### Installation
 
-1. Plugin über LoxBerry Plugin-Verwaltung installieren
-2. Plugin-Seite im LoxBerry öffnen
-3. Den folgenden Konfigurationsprozess durchführen
+1. Öffne im LoxBerry die **"Plugin Verwaltung"**
+2. Gehe zum Abschnitt **"Installiere neues Plugin"**
+3. Trage die URL zum ZIP-File des neuesten Releases ein:
+   - Alle Releases findest du unter: https://github.com/Grestorn/loxberry-bmw-cardata/releases
+   - Aktuelles Release (0.4.3): `https://github.com/Grestorn/loxberry-bmw-cardata/archive/refs/tags/0.4.3.zip`
+4. Gib deine **eigene SecurePIN** ein
+5. Klicke auf **"Installation"**
+6. Warte, bis die Installation abgeschlossen ist
+7. Öffne das Plugin durch **Klick auf das Icon** oder den Text **"bmw-cardata"**
+8. Es öffnet sich die Konfigurationsseite
+
+Nach der Installation fährst du mit dem folgenden Konfigurationsprozess fort.
 
 ### Konfiguration
 
 #### Schritt 1: BMW CarData Portal öffnen
 
-1. Navigieren Sie zur [MyBMW Fahrzeugübersicht](https://www.bmw.de/de-de/mybmw/vehicle-overview)
+1. Navigiere zur [MyBMW Fahrzeugübersicht](https://www.bmw.de/de-de/mybmw/vehicle-overview)
    - **Hinweis für internationale Nutzer:** Die URL kann je nach Land abweichen (z.B. `.com`, `.co.uk`, etc.)
-2. Wählen Sie ein Fahrzeug aus
+2. Wähle ein Fahrzeug aus
 
 > **⚠️ Wichtig:** Es genügt, die Schnittstelle für **EIN Fahrzeug** einzurichten. Der CarData Stream enthält automatisch die Daten **ALLER** dem Benutzer zugeordneten Fahrzeuge.
 
@@ -98,14 +107,14 @@ Die Daten werden von BMW in Echtzeit übertragen, sobald sich einer der Werte ä
 1. Button **"Datenauswahl ändern"** klicken
 2. **Nur die wirklich benötigten Werte auswählen** (z.B. Batterieladestand, Türstatus, Kilometerstand, GPS-Position)
 
-> **⚠️ Wichtig:** Nicht alle verfügbaren Werte aktivieren! Wählen Sie nur die Daten aus, die Sie tatsächlich in Loxone verwenden möchten, um die Last auf Netzwerk und LoxBerry gering zu halten.
+> **⚠️ Wichtig:** Nicht alle verfügbaren Werte aktivieren! Wähle nur die Daten aus, die du tatsächlich in Loxone verwenden möchtest, um die Last auf Netzwerk und LoxBerry gering zu halten.
 
 3. Nach Abschluss der Auswahl: Button **"Absenden und Stream starten"** klicken
 
 #### Schritt 5: Plugin-Konfiguration vervollständigen
 
-1. Öffnen Sie das Plugin im LoxBerry
-2. Tragen Sie die kopierten Werte ein:
+1. Öffne das Plugin im LoxBerry
+2. Trage die kopierten Werte ein:
    - **BMW CarData Client-ID** (aus Schritt 2)
    - **MQTT Stream Host** (Standard: `customer.streaming-cardata.bmwgroup.com`)
    - **MQTT Stream Port** (Standard: `9000`)
@@ -142,9 +151,9 @@ Nach dem Speichern der Konfiguration erscheint der Anmeldungsprozess:
 2. Button **"Tokens abrufen"** klicken
 3. Das Plugin holt die Authentifizierungs-Tokens von BMW ab
 4. Nach erfolgreicher Authentifizierung wird die **MQTT Bridge automatisch gestartet**
-5. Sie sehen die Meldung: **"Authentifizierung erfolgreich! Tokens wurden gespeichert."**
+5. Du siehst die Meldung: **"Authentifizierung erfolgreich! Tokens wurden gespeichert."**
 
-> **ℹ️ Hinweis:** Falls Sie die BMW-Anmeldung noch nicht abgeschlossen haben, erscheint die Meldung *"Die Anmeldung wurde nicht innerhalb der verfügbaren Zeit abgeschlossen."* - in diesem Fall einfach die BMW-Anmeldung (Schritt 6.2) abschließen und den Button "Tokens abrufen" erneut klicken.
+> **ℹ️ Hinweis:** Falls du die BMW-Anmeldung noch nicht abgeschlossen hast, erscheint die Meldung *"Die Anmeldung wurde nicht innerhalb der verfügbaren Zeit abgeschlossen."* - in diesem Fall einfach die BMW-Anmeldung (Schritt 6.2) abschließen und den Button "Tokens abrufen" erneut klicken.
 
 ### MQTT Bridge Status
 
@@ -176,21 +185,21 @@ bmw/WBA12345678901234/data/vehicle.location.coordinates.latitude/value
 bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.percent/value
 ```
 
-> **⚠️ Wichtiger Hinweis:** BMW sendet **keine Daten**, solange das Fahrzeug steht und keine Veränderungen stattfinden. Um den Datenfluss zu testen, können Sie z.B. das Auto öffnen (sofern der Türschloss-Status bei den zu übertragenden Daten ausgewählt wurde).
+> **⚠️ Wichtiger Hinweis:** BMW sendet **keine Daten**, solange das Fahrzeug steht und keine Veränderungen stattfinden. Um den Datenfluss zu testen, kannst du z.B. das Auto öffnen (sofern der Türschloss-Status bei den zu übertragenden Daten ausgewählt wurde).
 
 #### Schritt 1: Datenempfang überprüfen
 
-1. Öffnen Sie im Plugin die **"Logs"** Seite
-2. Wählen Sie das **"bmw-cardata-bridge"** Log
+1. Öffne im Plugin die **"Logs"** Seite
+2. Wähle das **"bmw-cardata-bridge"** Log
 3. Nach ca. 1 Minute sollte ein Zähler erscheinen, der die Anzahl der weitergeleiteten Messages anzeigt
    - Beispiel: `Forwarded 5 messages in last minute (total: 15)`
 4. Wenn hier Nachrichten gezählt werden, funktioniert die Bridge korrekt
 
 #### Schritt 2: Topics im MQTT Finder finden
 
-1. Öffnen Sie **LoxBerry MQTT Gateway** (anderes Plugin)
-2. Wechseln Sie zum Tab **"MQTT Finder"**
-3. Suchen Sie nach dem Topic **`bmw/<VIN>`** (z.B. `bmw/WBA12345678901234`)
+1. Öffne **LoxBerry MQTT Gateway** (anderes Plugin)
+2. Wechsle zum Tab **"MQTT Finder"**
+3. Suche nach dem Topic **`bmw/<VIN>`** (z.B. `bmw/WBA12345678901234`)
 4. Hier sollten alle empfangenen Topics des Fahrzeugs aufgelistet sein
 
 #### Schritt 3: Gateway Subscription einrichten
@@ -202,31 +211,37 @@ bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.perce
    - **Nur ein bestimmtes Fahrzeug:** `bmw/WBA12345678901234/#`
    - **Nur bestimmte Attribute:** `bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery/#`
 
-4. Subscription speichern
+4. **Optional:** Traffic reduzieren mit Filter-Expression
+   - Im Feld **"Subscription Filter Expression (RegEx)"** eintragen: `^(?!.*_value$).+`
+   - Dieser Filter lässt nur Messages durch, die auf `_value` enden
+   - Dadurch werden Metadaten (Zeitstempel, Einheiten) herausgefiltert
+   - Das reduziert den Traffic deutlich, da nur die tatsächlichen Werte übertragen werden
+
+5. Subscription speichern
 
 #### Schritt 4: In Loxone verwenden
 
-1. In **Loxone Config** Virtual Inputs für gewünschte Topics anlegen
-2. Topics abonnieren (entsprechend der konfigurierten Subscription)
-3. Werte in der Loxone-Programmierung verwenden
+Für die Einrichtung in Loxone Config (Virtual Inputs anlegen, Topics abonnieren, etc.) folge der Schritt-für-Schritt-Anleitung im LoxBerry Wiki:
+
+👉 [MQTT Gateway - Schritt für Schritt MQTT Loxone](https://wiki.loxberry.de/konfiguration/widget_help/widget_mqtt/mqtt_gateway/mqtt_schritt_fur_schritt_mqtt_loxone)
 
 ### Troubleshooting
 
 #### Problem: Anmeldung schlägt fehl
-- **Lösung 1:** Prüfen Sie, ob die Client-ID korrekt kopiert wurde
-- **Lösung 2:** Prüfen Sie, ob der Stream-Benutzername korrekt eingetragen wurde
-- **Lösung 3:** Prüfen Sie die Logs auf der "Logs" Tab-Seite des Plugins
+- **Lösung 1:** Prüfe, ob die Client-ID korrekt kopiert wurde
+- **Lösung 2:** Prüfe, ob der Stream-Benutzername korrekt eingetragen wurde
+- **Lösung 3:** Prüfe die Logs auf der "Logs" Tab-Seite des Plugins
 
 #### Problem: Bridge startet nicht
-- **Lösung 1:** Prüfen Sie, ob die Anmeldung erfolgreich war (Status "Authentifiziert")
-- **Lösung 2:** Prüfen Sie die Logs auf der "Logs" Tab-Seite
+- **Lösung 1:** Prüfe, ob die Anmeldung erfolgreich war (Status "Authentifiziert")
+- **Lösung 2:** Prüfe die Logs auf der "Logs" Tab-Seite
 - **Lösung 3:** Token manuell aktualisieren (Button "Token manuell aktualisieren")
 
 #### Problem: Keine Daten in Loxone
-- **Lösung 1:** Prüfen Sie, ob die Bridge läuft (Status im Plugin)
-- **Lösung 2:** Prüfen Sie, ob im BMW Portal Daten ausgewählt wurden (Schritt 4)
-- **Lösung 3:** Prüfen Sie die MQTT-Verbindung zum LoxBerry MQTT Gateway
-- **Lösung 4:** Prüfen Sie die Bridge-Logs (Anzahl weitergeleiteter Nachrichten wird jede Minute protokolliert)
+- **Lösung 1:** Prüfe, ob die Bridge läuft (Status im Plugin)
+- **Lösung 2:** Prüfe, ob im BMW Portal Daten ausgewählt wurden (Schritt 4)
+- **Lösung 3:** Prüfe die MQTT-Verbindung zum LoxBerry MQTT Gateway
+- **Lösung 4:** Prüfe die Bridge-Logs (Anzahl weitergeleiteter Nachrichten wird jede Minute protokolliert)
 
 #### Problem: BMW CarData Portal reagiert nicht
 - **Hinweis:** Die BMW Seite hat derzeit Performance-Probleme
@@ -238,10 +253,10 @@ bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.perce
 A: Die Anmeldung wird automatisch alle 10 Minuten erneuert und bleibt gültig, solange das Plugin läuft. Die maximale Gültigkeit ohne Erneuerung beträgt 2 Wochen.
 
 **F: Muss ich für jedes Fahrzeug eine eigene Konfiguration erstellen?**
-A: Nein! Der CarData Stream enthält automatisch Daten von ALLEN Fahrzeugen, die Ihrem BMW-Account zugeordnet sind.
+A: Nein! Der CarData Stream enthält automatisch Daten von ALLEN Fahrzeugen, die deinem BMW-Account zugeordnet sind.
 
 **F: Welche Daten sollte ich im BMW Portal auswählen?**
-A: Wählen Sie nur die Daten aus, die Sie wirklich benötigen. Weniger Daten = weniger Last auf Netzwerk und LoxBerry.
+A: Wähle nur die Daten aus, die du wirklich benötigst. Weniger Daten = weniger Last auf Netzwerk und LoxBerry.
 
 **F: Kostet die Nutzung von BMW CarData etwas?**
 A: Nein, BMW CarData ist für BMW-Kunden kostenlos verfügbar.
@@ -286,16 +301,25 @@ Data is transmitted by BMW in real-time as soon as any value changes. This ensur
 
 ### Requirements
 
-- **LoxBerry** version 1.4.3 or higher
+- **LoxBerry** version 3.0 or higher
 - **BMW vehicle** with BMW ConnectedDrive
 - **BMW CarData Portal access** (free for BMW customers)
 - Active internet connection
 
 ### Installation
 
-1. Install plugin via LoxBerry plugin management
-2. Open plugin page in LoxBerry
-3. Follow the configuration process below
+1. Open **"Plugin Management"** in LoxBerry
+2. Go to the section **"Install New Plugin"**
+3. Enter the URL to the ZIP file of the latest release:
+   - All releases can be found at: https://github.com/Grestorn/loxberry-bmw-cardata/releases
+   - Current release (0.4.3): `https://github.com/Grestorn/loxberry-bmw-cardata/archive/refs/tags/0.4.3.zip`
+4. Enter your **own SecurePIN**
+5. Click **"Install"**
+6. Wait for the installation to complete
+7. Open the plugin by **clicking the icon** or the text **"bmw-cardata"**
+8. The configuration page will open
+
+After installation, proceed with the configuration process below.
 
 ### Configuration
 
@@ -446,13 +470,19 @@ bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.perce
    - **Only a specific vehicle:** `bmw/WBA12345678901234/#`
    - **Only specific attributes:** `bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery/#`
 
-4. Save subscription
+4. **Optional:** Reduce traffic with filter expression
+   - In the **"Subscription Filter Expression (RegEx)"** field, enter: `^(?!.*_value$).+`
+   - This filter only allows messages that end with `_value`
+   - This filters out metadata (timestamps, units)
+   - This significantly reduces traffic as only actual values are transmitted
+
+5. Save subscription
 
 #### Step 4: Use in Loxone
 
-1. In **Loxone Config**, create Virtual Inputs for desired topics
-2. Subscribe to topics (according to configured subscription)
-3. Use values in Loxone programming
+For setting up in Loxone Config (creating Virtual Inputs, subscribing to topics, etc.), follow the step-by-step guide in the LoxBerry Wiki:
+
+👉 [MQTT Gateway - Step by Step MQTT Loxone](https://wiki.loxberry.de/konfiguration/widget_help/widget_mqtt/mqtt_gateway/mqtt_schritt_fur_schritt_mqtt_loxone)
 
 ### Troubleshooting
 

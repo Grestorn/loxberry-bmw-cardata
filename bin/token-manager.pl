@@ -63,7 +63,7 @@ sub check_and_refresh {
     LOGINF("Checking token status...");
 
     unless (-f $tokens_file) {
-        LOGERR("No tokens found. Please run oauth-init.pl and oauth-poll.pl first.");
+        LOGINF("No tokens found. Please run oauth-init.pl and oauth-poll.pl first.");
         LOGEND;
         return 1;
     }
