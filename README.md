@@ -104,7 +104,7 @@ Die Daten werden von BMW in Echtzeit übertragen, sobald sich einer der Werte ä
 
 #### Schritt 5: Plugin-Konfiguration vervollständigen
 
-um1. Öffnen Sie das Plugin im LoxBerry
+1. Öffnen Sie das Plugin im LoxBerry
 2. Tragen Sie die kopierten Werte ein:
    - **BMW CarData Client-ID** (aus Schritt 2)
    - **MQTT Stream Host** (Standard: `customer.streaming-cardata.bmwgroup.com`)
