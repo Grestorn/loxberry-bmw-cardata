@@ -42,7 +42,7 @@ Die Daten werden von BMW in Echtzeit übertragen, sobald sich einer der Werte ä
 
 ### Voraussetzungen
 
-- **LoxBerry** ab Version 1.4.3
+- **LoxBerry** ab Version 3.0
 - **BMW-Fahrzeug** mit BMW ConnectedDrive
 - **BMW CarData Portal Zugang** (kostenlos für BMW-Kunden)
 - Aktive Internetverbindung
