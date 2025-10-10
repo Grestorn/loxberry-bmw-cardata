@@ -1,3 +1,14 @@
+#### 0.4.8 (2025-10-10)
+
+##### Continuous Integration
+
+*  Added test deployment scripts (23b8158a)
+
+##### Bug Fixes
+
+* **UI:**  Fixed "BMW Anmeldung" button (ed8a8dcf)
+*  Fixed "BMW Anmeldung" button (d0ee02ed)
+
 #### 0.4.7 (2025-10-10)
 
 ##### Bug Fixes
