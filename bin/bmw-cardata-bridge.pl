@@ -167,7 +167,7 @@ while ($running) {
     $mqtt_cv = AnyEvent->condvar;
 
     # Run the event loop (this blocks until $mqtt_cv->send is called or error occurs)
-    LOGINF("Starting AnyEvent event loop...");
+    LOGDEB("Starting AnyEvent event loop...");
 
     # Wrap event loop in eval to catch all errors
     my $loop_error;
@@ -203,6 +203,19 @@ while ($running) {
 }
 
 # Final cleanup
+cleanup_connections();
+
+# Close LoxBerry MQTT connection on shutdown
+if ($loxberry_mqtt) {
+    eval {
+        undef $loxberry_mqtt;
+        LOGDEB("LoxBerry MQTT connection closed on shutdown");
+    };
+    if ($@) {
+        LOGERR("Error closing LoxBerry MQTT on shutdown: $@");
+    }
+}
+
 LOGINF("=== BMW CarData MQTT Bridge Stopped ===");
 LOGEND;
 exit 0;
@@ -425,8 +438,6 @@ sub setup_loxberry_connection {
 #
 
 sub connect_to_bmw_mqtt {
-    LOGINF("Connecting to BMW CarData MQTT...");
-
     my $host = $current_config->{stream_host};
     my $port = $current_config->{stream_port};
     my $stream_username = $current_config->{stream_username};
@@ -448,7 +459,7 @@ sub connect_to_bmw_mqtt {
     # Wrap all MQTT operations in eval to catch errors
     eval {
         # Create MQTT connection with all required BMW parameters
-        LOGINF("Creating MQTT connection with TLS, keepalive=30, clean_session=1...");
+        LOGDEB("Creating MQTT connection with TLS, keepalive=30, clean_session=1...");
 
         $bmw_mqtt = AnyEvent::MQTT->new(
             host => $host,
@@ -474,7 +485,6 @@ sub connect_to_bmw_mqtt {
         );
 
         LOGOK("MQTT connection object created successfully");
-        LOGINF("Connection will be established asynchronously when event loop starts...");
 
         # Subscribe to topics for each VIN
         my @vins = @{$current_config->{vins} || []};
@@ -609,17 +619,10 @@ sub cleanup_connections {
         }
     }
 
-    # Cleanup LoxBerry MQTT connection
-    if ($loxberry_mqtt) {
-        eval {
-            # Net::MQTT::Simple connection cleanup (just undef is sufficient)
-            undef $loxberry_mqtt;
-            LOGDEB("LoxBerry MQTT connection closed");
-        };
-        if ($@) {
-            LOGERR("Error closing LoxBerry MQTT: $@");
-        }
-    }
+    # DO NOT cleanup LoxBerry MQTT connection - it's persistent across reconnects
+    # The LoxBerry MQTT connection is established once at startup and reused
+    # Only cleanup when bridge is shutting down completely
+    LOGDEB("LoxBerry MQTT connection kept alive for next reconnect");
 
     $connection_active = 0;
     LOGDEB("Cleanup complete");

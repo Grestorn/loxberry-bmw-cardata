@@ -10,7 +10,8 @@
       "Bash(done)",
       "WebSearch",
       "WebFetch(domain:packages.debian.org)",
-      "WebFetch(domain:metacpan.org)"
+      "WebFetch(domain:metacpan.org)",
+      "Bash(perl:*)"
     ],
     "deny": [],
     "ask": []

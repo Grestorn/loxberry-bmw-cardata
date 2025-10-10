@@ -160,40 +160,94 @@
 <h2><TMPL_VAR OAUTH.TITLE></h2>
 <div class="ui-widget" style="margin-bottom: 20px;">
     <div class="ui-widget-content ui-corner-all" style="padding: 15px;">
-        <ol>
-            <li><TMPL_VAR OAUTH.STEP1></li>
-            <li><TMPL_VAR OAUTH.STEP2></li>
-            <li><TMPL_VAR OAUTH.STEP3>
-                <form method="post" action="index.cgi" style="margin-top: 10px;">
+        <ol style="list-style: none; padding-left: 0;">
+            <li style="margin-bottom: 15px;">
+                <TMPL_IF OAUTH_STEP1_2_DONE>
+                    <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em; color: green;"></span>
+                <TMPL_ELSE>
+                    <TMPL_IF OAUTH_STEP1_CURRENT>
+                        <span class="ui-icon ui-icon-arrowthick-1-e" style="float: left; margin-right: .3em; color: #0066cc;"></span>
+                    <TMPL_ELSE>
+                        <span style="float: left; margin-right: .3em; width: 16px;"></span>
+                    </TMPL_IF>
+                </TMPL_IF>
+                <strong>1.</strong> <TMPL_VAR OAUTH.STEP1>
+            </li>
+            <li style="margin-bottom: 15px;">
+                <TMPL_IF OAUTH_STEP1_2_DONE>
+                    <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em; color: green;"></span>
+                <TMPL_ELSE>
+                    <TMPL_IF OAUTH_STEP2_CURRENT>
+                        <span class="ui-icon ui-icon-arrowthick-1-e" style="float: left; margin-right: .3em; color: #0066cc;"></span>
+                    <TMPL_ELSE>
+                        <span style="float: left; margin-right: .3em; width: 16px;"></span>
+                    </TMPL_IF>
+                </TMPL_IF>
+                <strong>2.</strong> <TMPL_VAR OAUTH.STEP2>
+            </li>
+            <li style="margin-bottom: 15px;">
+                <TMPL_IF OAUTH_STEP3_DONE>
+                    <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em; color: green;"></span>
+                <TMPL_ELSE>
+                    <TMPL_IF OAUTH_STEP3_CURRENT>
+                        <span class="ui-icon ui-icon-arrowthick-1-e" style="float: left; margin-right: .3em; color: #0066cc;"></span>
+                    <TMPL_ELSE>
+                        <span style="float: left; margin-right: .3em; width: 16px;"></span>
+                    </TMPL_IF>
+                </TMPL_IF>
+                <strong>3.</strong> <TMPL_VAR OAUTH.STEP3>
+                <form method="post" action="index.cgi" style="margin-top: 10px; margin-left: 24px;">
                     <input type="hidden" name="action" value="request_device_code">
                     <button type="submit" class="ui-button ui-widget ui-corner-all" <TMPL_UNLESS CONFIG_HAS_CLIENT_ID>disabled</TMPL_UNLESS>>
                         <TMPL_VAR OAUTH.REQUEST_DEVICE_CODE_BUTTON>
                     </button>
                 </form>
                 <TMPL_UNLESS CONFIG_HAS_CLIENT_ID>
-                <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_CLIENT_ID></p>
+                <p style="color: #999; font-size: 0.9em; margin-top: 5px; margin-left: 24px;"><TMPL_VAR OAUTH.NEED_CLIENT_ID></p>
                 </TMPL_UNLESS>
             </li>
-            <li><TMPL_VAR OAUTH.STEP4>
-                <button type="button" class="ui-button ui-widget ui-corner-all" style="margin-top: 10px;"
-                        <TMPL_IF OAUTH_VERIFICATION_URI>onclick="window.open('<TMPL_VAR OAUTH_VERIFICATION_URI>', '_blank')"<TMPL_ELSE>disabled</TMPL_IF>>
-                    <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
-                </button>
-                <TMPL_IF OAUTH_VERIFICATION_URI>
-                <p style="color: #666; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.CODE_EXPIRES>: <TMPL_VAR OAUTH_EXPIRES_MINUTES> <TMPL_VAR STATUS.MINUTES></p>
+            <li style="margin-bottom: 15px;">
+                <TMPL_IF OAUTH_STEP4_DONE>
+                    <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em; color: green;"></span>
                 <TMPL_ELSE>
-                <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_DEVICE_CODE></p>
+                    <TMPL_IF OAUTH_STEP4_CURRENT>
+                        <span class="ui-icon ui-icon-arrowthick-1-e" style="float: left; margin-right: .3em; color: #0066cc;"></span>
+                    <TMPL_ELSE>
+                        <span style="float: left; margin-right: .3em; width: 16px;"></span>
+                    </TMPL_IF>
                 </TMPL_IF>
+                <strong>4.</strong> <TMPL_VAR OAUTH.STEP4>
+                <div style="margin-left: 24px;">
+                    <button type="button" class="ui-button ui-widget ui-corner-all" style="margin-top: 10px;"
+                            <TMPL_IF OAUTH_VERIFICATION_URI>onclick="window.open('<TMPL_VAR OAUTH_VERIFICATION_URI>', '_blank')"<TMPL_ELSE>disabled</TMPL_IF>>
+                        <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
+                    </button>
+                    <TMPL_IF OAUTH_VERIFICATION_URI>
+                    <p style="color: #666; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.CODE_EXPIRES>: <TMPL_VAR OAUTH_EXPIRES_MINUTES> <TMPL_VAR STATUS.MINUTES></p>
+                    <TMPL_ELSE>
+                    <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_DEVICE_CODE></p>
+                    </TMPL_IF>
+                </div>
             </li>
-            <li><TMPL_VAR OAUTH.STEP5>
-                <form method="post" action="index.cgi" style="margin-top: 10px;">
+            <li style="margin-bottom: 15px;">
+                <TMPL_IF OAUTH_STEP5_DONE>
+                    <span class="ui-icon ui-icon-check" style="float: left; margin-right: .3em; color: green;"></span>
+                <TMPL_ELSE>
+                    <TMPL_IF OAUTH_STEP5_CURRENT>
+                        <span class="ui-icon ui-icon-arrowthick-1-e" style="float: left; margin-right: .3em; color: #0066cc;"></span>
+                    <TMPL_ELSE>
+                        <span style="float: left; margin-right: .3em; width: 16px;"></span>
+                    </TMPL_IF>
+                </TMPL_IF>
+                <strong>5.</strong> <TMPL_VAR OAUTH.STEP5>
+                <form method="post" action="index.cgi" style="margin-top: 10px; margin-left: 24px;">
                     <input type="hidden" name="action" value="check_oauth">
                     <button type="submit" class="ui-button ui-widget ui-corner-all" <TMPL_UNLESS OAUTH_VERIFICATION_URI>disabled</TMPL_UNLESS>>
                         <TMPL_VAR OAUTH.POLL_BUTTON>
                     </button>
                 </form>
                 <TMPL_UNLESS OAUTH_VERIFICATION_URI>
-                <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_VERIFICATION></p>
+                <p style="color: #999; font-size: 0.9em; margin-top: 5px; margin-left: 24px;"><TMPL_VAR OAUTH.NEED_VERIFICATION></p>
                 </TMPL_UNLESS>
             </li>
         </ol>

@@ -35,8 +35,10 @@ my $helptemplate = "help.html";
 our %navbar;
 $navbar{10}{Name} = $L{'NAVIGATION.MAIN'};
 $navbar{10}{URL} = 'index.cgi';
+$navbar{10}{active} = 1 if $page eq 'main';
 $navbar{20}{Name} = $L{'NAVIGATION.LOGS'};
 $navbar{20}{URL} = 'index.cgi?page=logs';
+$navbar{20}{active} = 1 if $page eq 'logs';
 
 # File paths
 my $data_dir = "$lbpdatadir";
@@ -277,6 +279,43 @@ sub prepare_template_vars {
             $template->param('OAUTH_EXPIRES_MINUTES' => int($expires_in / 60));
         }
     }
+
+    # OAuth Step Status
+    # Step 1 & 2: Config saved with client_id
+    my $step1_2_done = $config && $config->{client_id} && $config->{client_id} ne '';
+    $template->param('OAUTH_STEP1_2_DONE' => $step1_2_done);
+
+    # Step 3: Device code requested
+    my $step3_done = $device_code_data && exists $device_code_data->{device_code};
+    $template->param('OAUTH_STEP3_DONE' => $step3_done);
+
+    # Step 4: User clicked BMW login button (we track this via session/cookie or assume done if step 3 done)
+    # For simplicity, we consider step 4 done if device code exists and user has verification URI
+    my $step4_done = $step3_done && ($device_code_data->{verification_uri} || $device_code_data->{verification_uri_complete});
+    $template->param('OAUTH_STEP4_DONE' => $step4_done);
+
+    # Step 5: Tokens retrieved (authentication complete)
+    my $step5_done = $tokens && exists $tokens->{gcid};
+    $template->param('OAUTH_STEP5_DONE' => $step5_done);
+
+    # Determine current step (next step to do)
+    my $current_step = 1;
+    if ($step5_done) {
+        $current_step = 0; # All done
+    } elsif ($step4_done) {
+        $current_step = 5;
+    } elsif ($step3_done) {
+        $current_step = 4;
+    } elsif ($step1_2_done) {
+        $current_step = 3;
+    }
+
+    $template->param('OAUTH_CURRENT_STEP' => $current_step);
+    $template->param('OAUTH_STEP1_CURRENT' => $current_step == 1);
+    $template->param('OAUTH_STEP2_CURRENT' => $current_step == 2);
+    $template->param('OAUTH_STEP3_CURRENT' => $current_step == 3);
+    $template->param('OAUTH_STEP4_CURRENT' => $current_step == 4);
+    $template->param('OAUTH_STEP5_CURRENT' => $current_step == 5);
 
     # Authentication status
     if ($tokens && exists $tokens->{gcid}) {
