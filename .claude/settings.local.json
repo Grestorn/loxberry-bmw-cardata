@@ -14,7 +14,8 @@
       "Bash(perl:*)",
       "Bash(cat:*)",
       "Bash(node_modules.binchangelog.cmd:*)",
-      "Bash(npx generate-changelog:*)"
+      "Bash(npx generate-changelog:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

@@ -144,7 +144,28 @@ const generateChangelog = (version) => {
       args = '-p -a';
       break;
   }
-  execSync(`node_modules\\.bin\\changelog.cmd ${args}`);
+
+  // Get the latest tag to generate changelog from last release
+  let lastTag = '';
+  try {
+    lastTag = execSync('git describe --tags --abbrev=0').toString().trim();
+    console.log(`Generating changelog from tag: ${lastTag}`);
+  } catch (e) {
+    console.log('No previous tags found, generating full changelog');
+  }
+
+  // If we have a previous tag, generate changelog from that tag to HEAD
+  // This ensures we capture all commits since the last release
+  if (lastTag) {
+    try {
+      execSync(`node_modules\\.bin\\changelog.cmd -t ${lastTag}..HEAD -a`);
+    } catch (e) {
+      console.warn('Tag-based changelog generation failed, falling back to standard method');
+      execSync(`node_modules\\.bin\\changelog.cmd ${args}`);
+    }
+  } else {
+    execSync(`node_modules\\.bin\\changelog.cmd ${args}`);
+  }
 };
 
 const getPackage = () => {
