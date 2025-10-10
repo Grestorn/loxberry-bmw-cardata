@@ -28,7 +28,7 @@ my %L = LoxBerry::Web::readlanguage($template, "language.ini");
 # Plugin data
 my $plugin = LoxBerry::System::plugindata();
 my $plugintitle = "$plugin->{PLUGINDB_TITLE} $plugin->{PLUGINDB_VERSION}";
-my $helplink = "https://bmw-cardata.bmwgroup.com/customer/public/api-documentation";
+my $helplink = "https://github.com/Grestorn/loxberry-bmw-cardata/blob/main/README.md";
 my $helptemplate = "help.html";
 
 # Get page parameter first (needed for navigation)

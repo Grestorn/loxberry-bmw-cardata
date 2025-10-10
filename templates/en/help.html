@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMW CarData Plugin - Help</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 900px; margin: 0 auto; }
+        h1 { color: #0066cc; border-bottom: 2px solid #0066cc; padding-bottom: 10px; }
+        h2 { color: #333; margin-top: 30px; }
+        h3 { color: #666; margin-top: 20px; }
+        .info-box { background: #e7f3ff; border-left: 4px solid #0066cc; padding: 15px; margin: 15px 0; }
+        .warning-box { background: #fff3cd; border-left: 4px solid #ff9800; padding: 15px; margin: 15px 0; }
+        .step { background: #f5f5f5; border-radius: 5px; padding: 15px; margin: 10px 0; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+        ul, ol { margin: 10px 0; padding-left: 30px; }
+        li { margin: 8px 0; }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>🚗 BMW CarData Plugin - User Documentation</h1>
+
+    <h2>📖 Overview</h2>
+    <p>This plugin enables the transmission of BMW vehicle data from the <strong>BMW CarData Portal</strong> via the <strong>LoxBerry MQTT Gateway</strong> to the <strong>Loxone Miniserver</strong>.</p>
+
+    <div class="info-box">
+        <strong>✅ Available Data:</strong> Door status, mileage, battery charge level, fuel level, GPS position, tire pressure, vehicle status, and many more...
+    </div>
+
+    <h2>⚙️ Configuration</h2>
+
+    <h3>Step 1: Create BMW CarData Client</h3>
+    <div class="step">
+        <ol>
+            <li>Open the <a href="https://www.bmw.de/de-de/mybmw/vehicle-overview" target="_blank">MyBMW Vehicle Overview</a></li>
+            <li>Select a vehicle</li>
+            <li>Scroll down and click <strong>"Create CarData Client"</strong></li>
+            <li><strong>Copy the Client ID</strong> and save it for later</li>
+            <li>Activate both options:
+                <ul>
+                    <li>✅ "CarData Stream"</li>
+                    <li>✅ "Request access to CarData API"</li>
+                </ul>
+            </li>
+        </ol>
+        <div class="warning-box">
+            <strong>⚠️ Important:</strong> DO NOT click "Authenticate Device"! Authentication will be done later via the plugin.
+        </div>
+    </div>
+
+    <h3>Step 2: Configure CarData Streaming</h3>
+    <div class="step">
+        <ol>
+            <li>Scroll to the <strong>"CarData Streaming"</strong> section</li>
+            <li>Click <strong>"Configure Data Stream"</strong></li>
+            <li>Click <strong>"Show Connection Details"</strong> at the bottom</li>
+            <li><strong>Copy the username</strong> and save it for later</li>
+            <li>Verify host and port (default: <code>customer.streaming-cardata.bmwgroup.com:9000</code>)</li>
+        </ol>
+    </div>
+
+    <h3>Step 3: Data Selection</h3>
+    <div class="step">
+        <ol>
+            <li>Click <strong>"Change Data Selection"</strong></li>
+            <li><strong>Select only the required values</strong> (e.g., battery charge level, door status)</li>
+            <li>Click <strong>"Submit and Start Stream"</strong></li>
+        </ol>
+        <div class="warning-box">
+            <strong>⚠️ Important:</strong> Do not activate all values! Select only the data you actually need.
+        </div>
+    </div>
+
+    <h3>Step 4: Configure Plugin</h3>
+    <div class="step">
+        <ol>
+            <li>Open the plugin in LoxBerry</li>
+            <li>Enter the copied values:
+                <ul>
+                    <li><strong>Client ID</strong> (from Step 1)</li>
+                    <li><strong>Stream Host</strong> (default: <code>customer.streaming-cardata.bmwgroup.com</code>)</li>
+                    <li><strong>Stream Port</strong> (default: <code>9000</code>)</li>
+                    <li><strong>Stream Username</strong> (from Step 2)</li>
+                    <li><strong>MQTT Topic Prefix</strong> (default: <code>bmw</code>)</li>
+                </ul>
+            </li>
+            <li>Click <strong>"Save Configuration"</strong></li>
+        </ol>
+    </div>
+
+    <h3>Step 5: Perform Authentication</h3>
+    <div class="step">
+        <p>After saving the configuration, the authentication process appears with 5 steps:</p>
+        <ol>
+            <li><strong>✓</strong> Step 1 & 2: Configuration saved (automatically completed)</li>
+            <li><strong>➤</strong> Step 3: Click <strong>"Start Registration"</strong></li>
+            <li><strong>➤</strong> Step 4: Click <strong>"Go to BMW Login"</strong> and log in with your BMW ID</li>
+            <li><strong>➤</strong> Step 5: Click <strong>"Retrieve Tokens"</strong></li>
+        </ol>
+        <div class="info-box">
+            After successful authentication, the <strong>MQTT bridge is automatically started</strong>.
+        </div>
+    </div>
+
+    <h2>📊 Using MQTT Topics in Loxone</h2>
+
+    <h3>Topic Format</h3>
+    <p>Vehicle data is provided in the following format:</p>
+    <code>&lt;prefix&gt;/&lt;VIN&gt;/&lt;attribute&gt;</code>
+
+    <h3>Example Topics</h3>
+    <ul>
+        <li><code>bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.percent/value</code></li>
+        <li><code>bmw/WBA12345678901234/data/vehicle.body.doors.frontLeft.lockState/value</code></li>
+        <li><code>bmw/WBA12345678901234/data/vehicle.location.coordinates.latitude/value</code></li>
+    </ul>
+
+    <div class="warning-box">
+        <strong>⚠️ Important:</strong> BMW does <strong>not send data</strong> while the vehicle is stationary and no changes occur. To test, e.g., unlock the car.
+    </div>
+
+    <h3>Loxone Integration</h3>
+    <div class="step">
+        <ol>
+            <li>Open <strong>LoxBerry MQTT Gateway</strong></li>
+            <li>Go to the <strong>"MQTT Gateway"</strong> tab</li>
+            <li>Add a new subscription: <code>bmw/#</code></li>
+            <li>Optional: Add a filter: <code>^(?!.*_value$).+</code> (values only, no metadata)</li>
+            <li>Follow the guide in the LoxBerry Wiki: <a href="https://wiki.loxberry.de/konfiguration/widget_help/widget_mqtt/mqtt_gateway/mqtt_schritt_fur_schritt_mqtt_loxone" target="_blank">MQTT Step by Step</a></li>
+        </ol>
+    </div>
+
+    <h2>🔧 Troubleshooting</h2>
+
+    <h3>Problem: Authentication fails</h3>
+    <ul>
+        <li>Check the Client ID and Stream Username</li>
+        <li>Check the logs on the "Logs" tab page</li>
+    </ul>
+
+    <h3>Problem: Bridge doesn't start</h3>
+    <ul>
+        <li>Check the authentication status (must be "Authenticated")</li>
+        <li>Check the logs on the "Logs" tab page</li>
+        <li>Click "Manually Refresh Token"</li>
+    </ul>
+
+    <h3>Problem: No data in Loxone</h3>
+    <ul>
+        <li>Check if the bridge is running (status in plugin)</li>
+        <li>Check if data was selected in BMW portal</li>
+        <li>Check bridge logs (number of forwarded messages)</li>
+        <li>Test by unlocking the vehicle</li>
+    </ul>
+
+    <h2>❓ Frequently Asked Questions</h2>
+
+    <h3>How long is authentication valid?</h3>
+    <p>Authentication is automatically renewed every 10 minutes and remains valid as long as the plugin is running (maximum 2 weeks).</p>
+
+    <h3>Do I need a separate configuration for each vehicle?</h3>
+    <p>No! The CarData Stream automatically includes data from ALL vehicles in your BMW account.</p>
+
+    <h3>Does it cost anything?</h3>
+    <p>No, BMW CarData is available free of charge for BMW customers.</p>
+
+    <h3>What happens after a LoxBerry reboot?</h3>
+    <p>The bridge starts automatically at system startup. Tokens are updated by the cron job every 10 minutes.</p>
+
+    <hr style="margin-top: 40px;">
+    <p style="text-align: center; color: #666; font-size: 0.9em;">
+        Full documentation: <a href="https://github.com/Grestorn/loxberry-bmw-cardata/blob/main/README.md" target="_blank">GitHub README</a>
+    </p>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMW CarData Plugin - Hilfe</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 900px; margin: 0 auto; }
+        h1 { color: #0066cc; border-bottom: 2px solid #0066cc; padding-bottom: 10px; }
+        h2 { color: #333; margin-top: 30px; }
+        h3 { color: #666; margin-top: 20px; }
+        .info-box { background: #e7f3ff; border-left: 4px solid #0066cc; padding: 15px; margin: 15px 0; }
+        .warning-box { background: #fff3cd; border-left: 4px solid #ff9800; padding: 15px; margin: 15px 0; }
+        .step { background: #f5f5f5; border-radius: 5px; padding: 15px; margin: 10px 0; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+        ul, ol { margin: 10px 0; padding-left: 30px; }
+        li { margin: 8px 0; }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h1>🚗 BMW CarData Plugin - Anwenderdokumentation</h1>
+
+    <h2>📖 Übersicht</h2>
+    <p>Dieses Plugin ermöglicht die Übertragung von BMW Fahrzeugdaten vom <strong>BMW CarData Portal</strong> über den <strong>LoxBerry MQTT Gateway</strong> zum <strong>Loxone Miniserver</strong>.</p>
+
+    <div class="info-box">
+        <strong>✅ Verfügbare Daten:</strong> Türstatus, Kilometerstand, Batterieladestand, Tankfüllung, GPS-Position, Reifendruck, Fahrzeugstatus und viele weitere...
+    </div>
+
+    <h2>⚙️ Konfiguration</h2>
+
+    <h3>Schritt 1: BMW CarData Client erstellen</h3>
+    <div class="step">
+        <ol>
+            <li>Öffne die <a href="https://www.bmw.de/de-de/mybmw/vehicle-overview" target="_blank">MyBMW Fahrzeugübersicht</a></li>
+            <li>Wähle ein Fahrzeug aus</li>
+            <li>Scrolle nach unten und klicke auf <strong>"CarData Client erstellen"</strong></li>
+            <li><strong>Kopiere die Client-ID</strong> und bewahre sie für später auf</li>
+            <li>Aktiviere beide Optionen:
+                <ul>
+                    <li>✅ "CarData Stream"</li>
+                    <li>✅ "Zugang zur CarData API beantragen"</li>
+                </ul>
+            </li>
+        </ol>
+        <div class="warning-box">
+            <strong>⚠️ Wichtig:</strong> NICHT auf "Gerät authentifizieren" drücken! Die Authentifizierung erfolgt später über das Plugin.
+        </div>
+    </div>
+
+    <h3>Schritt 2: CarData Streaming konfigurieren</h3>
+    <div class="step">
+        <ol>
+            <li>Scrolle zum Abschnitt <strong>"CarData Streaming"</strong></li>
+            <li>Klicke auf <strong>"Datenstream konfigurieren"</strong></li>
+            <li>Klicke unten auf <strong>"Verbindungsdetails anzeigen"</strong></li>
+            <li><strong>Kopiere den Benutzernamen</strong> und bewahre ihn für später auf</li>
+            <li>Überprüfe Host und Port (Standard: <code>customer.streaming-cardata.bmwgroup.com:9000</code>)</li>
+        </ol>
+    </div>
+
+    <h3>Schritt 3: Datenauswahl</h3>
+    <div class="step">
+        <ol>
+            <li>Klicke auf <strong>"Datenauswahl ändern"</strong></li>
+            <li><strong>Wähle nur die benötigten Werte aus</strong> (z.B. Batterieladestand, Türstatus)</li>
+            <li>Klicke auf <strong>"Absenden und Stream starten"</strong></li>
+        </ol>
+        <div class="warning-box">
+            <strong>⚠️ Wichtig:</strong> Nicht alle Werte aktivieren! Wähle nur die Daten, die du wirklich benötigst.
+        </div>
+    </div>
+
+    <h3>Schritt 4: Plugin konfigurieren</h3>
+    <div class="step">
+        <ol>
+            <li>Öffne das Plugin im LoxBerry</li>
+            <li>Trage die kopierten Werte ein:
+                <ul>
+                    <li><strong>Client-ID</strong> (aus Schritt 1)</li>
+                    <li><strong>Stream Host</strong> (Standard: <code>customer.streaming-cardata.bmwgroup.com</code>)</li>
+                    <li><strong>Stream Port</strong> (Standard: <code>9000</code>)</li>
+                    <li><strong>Stream Benutzername</strong> (aus Schritt 2)</li>
+                    <li><strong>MQTT Topic-Präfix</strong> (Standard: <code>bmw</code>)</li>
+                </ul>
+            </li>
+            <li>Klicke auf <strong>"Konfiguration speichern"</strong></li>
+        </ol>
+    </div>
+
+    <h3>Schritt 5: Anmeldung durchführen</h3>
+    <div class="step">
+        <p>Nach dem Speichern der Konfiguration erscheint der Anmeldungsprozess mit 5 Schritten:</p>
+        <ol>
+            <li><strong>✓</strong> Schritt 1 & 2: Konfiguration gespeichert (automatisch erledigt)</li>
+            <li><strong>➤</strong> Schritt 3: Klicke auf <strong>"Registrierung starten"</strong></li>
+            <li><strong>➤</strong> Schritt 4: Klicke auf <strong>"Zur BMW Anmeldung"</strong> und melde dich mit deiner BMW-ID an</li>
+            <li><strong>➤</strong> Schritt 5: Klicke auf <strong>"Tokens abrufen"</strong></li>
+        </ol>
+        <div class="info-box">
+            Nach erfolgreicher Anmeldung wird die <strong>MQTT Bridge automatisch gestartet</strong>.
+        </div>
+    </div>
+
+    <h2>📊 MQTT Topics in Loxone verwenden</h2>
+
+    <h3>Topic-Format</h3>
+    <p>Die Fahrzeugdaten werden im folgenden Format bereitgestellt:</p>
+    <code>&lt;prefix&gt;/&lt;VIN&gt;/&lt;attribut&gt;</code>
+
+    <h3>Beispiel-Topics</h3>
+    <ul>
+        <li><code>bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.percent/value</code></li>
+        <li><code>bmw/WBA12345678901234/data/vehicle.body.doors.frontLeft.lockState/value</code></li>
+        <li><code>bmw/WBA12345678901234/data/vehicle.location.coordinates.latitude/value</code></li>
+    </ul>
+
+    <div class="warning-box">
+        <strong>⚠️ Wichtig:</strong> BMW sendet <strong>keine Daten</strong>, solange das Fahrzeug steht und keine Veränderungen stattfinden. Zum Testen z.B. das Auto öffnen.
+    </div>
+
+    <h3>Integration in Loxone</h3>
+    <div class="step">
+        <ol>
+            <li>Öffne <strong>LoxBerry MQTT Gateway</strong></li>
+            <li>Gehe zum Tab <strong>"MQTT Gateway"</strong></li>
+            <li>Füge eine neue Subscription hinzu: <code>bmw/#</code></li>
+            <li>Optional: Füge einen Filter hinzu: <code>^(?!.*_value$).+</code> (nur Werte, keine Metadaten)</li>
+            <li>Folge der Anleitung im LoxBerry Wiki: <a href="https://wiki.loxberry.de/konfiguration/widget_help/widget_mqtt/mqtt_gateway/mqtt_schritt_fur_schritt_mqtt_loxone" target="_blank">MQTT Schritt für Schritt</a></li>
+        </ol>
+    </div>
+
+    <h2>🔧 Fehlerbehebung</h2>
+
+    <h3>Problem: Anmeldung schlägt fehl</h3>
+    <ul>
+        <li>Prüfe die Client-ID und den Stream-Benutzernamen</li>
+        <li>Prüfe die Logs auf der "Protokolle" Tab-Seite</li>
+    </ul>
+
+    <h3>Problem: Bridge startet nicht</h3>
+    <ul>
+        <li>Prüfe den Authentifizierungsstatus (muss "Authentifiziert" sein)</li>
+        <li>Prüfe die Logs auf der "Protokolle" Tab-Seite</li>
+        <li>Klicke auf "Token manuell aktualisieren"</li>
+    </ul>
+
+    <h3>Problem: Keine Daten in Loxone</h3>
+    <ul>
+        <li>Prüfe, ob die Bridge läuft (Status im Plugin)</li>
+        <li>Prüfe, ob Daten im BMW Portal ausgewählt wurden</li>
+        <li>Prüfe die Bridge-Logs (Anzahl weitergeleiteter Nachrichten)</li>
+        <li>Teste durch Öffnen des Fahrzeugs</li>
+    </ul>
+
+    <h2>❓ Häufig gestellte Fragen</h2>
+
+    <h3>Wie lange ist die Anmeldung gültig?</h3>
+    <p>Die Anmeldung wird automatisch alle 10 Minuten erneuert und bleibt gültig, solange das Plugin läuft (maximal 2 Wochen).</p>
+
+    <h3>Muss ich für jedes Fahrzeug eine eigene Konfiguration erstellen?</h3>
+    <p>Nein! Der CarData Stream enthält automatisch Daten von ALLEN Fahrzeugen deines BMW-Accounts.</p>
+
+    <h3>Kostet die Nutzung etwas?</h3>
+    <p>Nein, BMW CarData ist für BMW-Kunden kostenlos verfügbar.</p>
+
+    <h3>Was passiert bei einem LoxBerry-Neustart?</h3>
+    <p>Die Bridge startet automatisch beim Systemstart. Tokens werden vom Cron-Job alle 10 Minuten aktualisiert.</p>
+
+    <hr style="margin-top: 40px;">
+    <p style="text-align: center; color: #666; font-size: 0.9em;">
+        Vollständige Dokumentation: <a href="https://github.com/Grestorn/loxberry-bmw-cardata/blob/main/README.md" target="_blank">GitHub README</a>
+    </p>
+</body>
+</html>
