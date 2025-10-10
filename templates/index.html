@@ -218,10 +218,17 @@
                 </TMPL_IF>
                 <strong>4.</strong> <TMPL_VAR OAUTH.STEP4>
                 <div style="margin-left: 28px;">
-                    <button type="button" class="ui-button ui-widget ui-corner-all" style="margin-top: 10px;"
-                            <TMPL_IF OAUTH_VERIFICATION_URI>onclick="window.open('<TMPL_VAR OAUTH_VERIFICATION_URI>', '_blank')"<TMPL_ELSE>disabled</TMPL_IF>>
-                        <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
-                    </button>
+                    <TMPL_IF OAUTH_VERIFICATION_URI>
+                        <a href="<TMPL_VAR OAUTH_VERIFICATION_URI>" target="_blank" rel="noopener noreferrer"
+                           class="ui-button ui-widget ui-corner-all"
+                           style="margin-top: 10px; display: inline-block; text-decoration: none; padding: 8px 16px; cursor: pointer;">
+                            <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
+                        </a>
+                    <TMPL_ELSE>
+                        <button type="button" class="ui-button ui-widget ui-corner-all" style="margin-top: 10px;" disabled>
+                            <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
+                        </button>
+                    </TMPL_IF>
                     <TMPL_IF OAUTH_VERIFICATION_URI>
                     <p style="color: #666; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.CODE_EXPIRES>: <TMPL_VAR OAUTH_EXPIRES_MINUTES> <TMPL_VAR STATUS.MINUTES></p>
                     <TMPL_ELSE>

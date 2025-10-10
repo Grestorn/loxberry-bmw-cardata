@@ -247,14 +247,15 @@ const run = async () => {
 
   const githubUrl = getGithubUrl();
 
-  // Generate changelog BEFORE bumping version
-  // This ensures the changelog gets the correct version number
-  console.log('generating changelog ...');
-  generateChangelog(newVersion);
-
+  // Bump version first
   updateNpm({ version: newVersion, isPrerelease });
   const package = getPackage();
   const version = package.version;
+
+  // Generate changelog AFTER bumping version
+  // generate-changelog will use the new version from package.json
+  console.log('generating changelog ...');
+  generateChangelog(newVersion);
 
   if (!(await question(`New Version will be ${version}! is that correct?`))) {
     console.log('Ok, stopping');
