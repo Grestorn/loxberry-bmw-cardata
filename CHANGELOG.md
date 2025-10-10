@@ -1,3 +1,9 @@
+#### 0.4.7 (2025-10-10)
+
+##### Bug Fixes
+
+*  Fixed "BMW Anmeldung" button (50b0254d)
+
 #### 0.4.6 (2025-10-10)
 
 ##### New Features
