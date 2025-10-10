@@ -11,7 +11,10 @@
       "WebSearch",
       "WebFetch(domain:packages.debian.org)",
       "WebFetch(domain:metacpan.org)",
-      "Bash(perl:*)"
+      "Bash(perl:*)",
+      "Bash(cat:*)",
+      "Bash(node_modules.binchangelog.cmd:*)",
+      "Bash(npx generate-changelog:*)"
     ],
     "deny": [],
     "ask": []

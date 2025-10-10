@@ -31,6 +31,10 @@ my $plugintitle = "$plugin->{PLUGINDB_TITLE} $plugin->{PLUGINDB_VERSION}";
 my $helplink = "https://bmw-cardata.bmwgroup.com/customer/public/api-documentation";
 my $helptemplate = "help.html";
 
+# Get page parameter first (needed for navigation)
+my $page = $cgi->param('page') || 'main';
+my $action = $cgi->param('action') || '';
+
 # Navigation
 our %navbar;
 $navbar{10}{Name} = $L{'NAVIGATION.MAIN'};
@@ -47,8 +51,6 @@ my $tokens_file = "$data_dir/tokens.json";
 my $config_file = "$data_dir/config.json";
 
 # Handle form submissions
-my $action = $cgi->param('action') || '';
-my $page = $cgi->param('page') || 'main';
 
 if ($action eq 'save_config') {
     handle_save_config();

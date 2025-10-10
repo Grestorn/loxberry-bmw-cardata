@@ -141,7 +141,7 @@ const generateChangelog = (version) => {
       args = '-m -a';
       break;
     case 'patch':
-      args = '-p a';
+      args = '-p -a';
       break;
   }
   execSync(`node_modules\\.bin\\changelog.cmd ${args}`);
@@ -226,13 +226,18 @@ const run = async () => {
 
   const githubUrl = getGithubUrl();
 
+  // Generate changelog BEFORE bumping version
+  // This ensures the changelog gets the correct version number
+  console.log('generating changelog ...');
+  generateChangelog(newVersion);
+
   updateNpm({ version: newVersion, isPrerelease });
   const package = getPackage();
   const version = package.version;
 
   if (!(await question(`New Version will be ${version}! is that correct?`))) {
     console.log('Ok, stopping');
-    gitReset(['package.json', 'package-lock.json']);
+    gitReset(['package.json', 'package-lock.json', 'CHANGELOG.md']);
     return;
   }
 
@@ -247,8 +252,6 @@ const run = async () => {
     await updateReleaseCfg(version, githubUrl);
   }
 
-  console.log('generating changelog ...');
-  generateChangelog(newVersion);
   console.log('generate new build');
 
   config.additionalCommands.forEach((command) => {
