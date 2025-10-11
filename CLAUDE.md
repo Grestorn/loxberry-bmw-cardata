@@ -452,4 +452,173 @@ The plugin consists of four main Perl scripts:
    use Net::MQTT::Simple;
    my $mqtt = Net::MQTT::Simple->new($broker);
    ```
+
+## Local Development Environment
+
+The project includes a complete local development environment that allows testing the web interface on Windows without deploying to LoxBerry.
+
+**Location:** `dev/` directory
+
+### Quick Start
+
+**Method 1: Simple Static Output (Fastest)**
+```bash
+cd dev
+./run-dev.bat
+```
+Generates static HTML output and opens in browser. Form actions won't work, but useful for UI testing.
+
+**Method 2: HTTP Server (Full Functionality)**
+Requires `HTTP::Server::Simple::CGI` Perl module:
+```bash
+cd dev
+./start-dev.bat
+```
+Starts HTTP server on http://localhost:8080/ with full CGI support.
+
+### Development Environment Components
+
+**dev/LoxBerryMock.pm** - Mock module simulating LoxBerry functionality:
+- `LoxBerry::System` - Plugin metadata
+- `LoxBerry::Web` - Web interface functions (readlanguage, lbheader, lbfooter)
+- `LoxBerry::JSON` - JSON handling
+- `LoxBerry::Log` - Logging (dummy implementation)
+- `LoxBerry::IO` - MQTT configuration
+
+**dev/index-dev.cgi** - Development version of web interface that uses mock modules
+
+**dev/start-dev-server.pl** - Simple HTTP server with CGI support
+
+**Path Mappings in Development:**
+| LoxBerry Variable | Local Path |
+|-------------------|------------|
+| `$lbptemplatedir` | `templates/` |
+| `$lbpdatadir` | `data/` |
+| `$lbpbindir` | `bin/` |
+| `$lbplogdir` | `data/logs/` |
+| `$lbpconfigdir` | `config/` |
+
+### What Works in Dev Mode
+
+✅ **Working:**
+- Web interface display
+- Configuration forms
+- Step indicators with icons
+- Save configuration to `data/config.json`
+- Page navigation
+- Language files (German/English via `LOXBERRY_LANG` env var)
+
+❌ **Not Working (LoxBerry only):**
+- OAuth authentication (requires `bin/oauth-init.pl`, `bin/oauth-poll.pl`)
+- Token refresh (requires `bin/token-manager.pl`)
+- Bridge control (requires `bin/bridge-control.sh`)
+- Log viewing (requires LoxBerry log system)
+
+### Simulating Different States
+
+**Not Authenticated:**
+Delete `data/tokens.json`
+
+**Authenticated:**
+Create `data/tokens.json`:
+```json
+{
+  "gcid": "test-gcid-123",
+  "access_token": "test-access-token",
+  "id_token": "test-id-token",
+  "refresh_token": "test-refresh-token",
+  "expires_at": 9999999999,
+  "refresh_expires_at": 9999999999
+}
+```
+
+**Device Code Flow Active:**
+Create `data/device_code.json`:
+```json
+{
+  "device_code": "test-device-code",
+  "user_code": "ABC-DEF",
+  "verification_uri": "https://www.bmw.de/verify",
+  "verification_uri_complete": "https://www.bmw.de/verify?code=ABC-DEF",
+  "expires_in": 600,
+  "interval": 5
+}
+```
+
+## Plugin Deployment
+
+### Creating Plugin Archives
+
+The project includes three scripts for creating deployment-ready ZIP archives:
+
+**create-plugin-zip.sh** (Linux/macOS/Git Bash):
+```bash
+./create-plugin-zip.sh
+```
+
+**create-plugin-zip.cmd** (Windows CMD):
+```cmd
+create-plugin-zip.cmd
+```
+
+**create-plugin-zip.ps1** (Windows PowerShell):
+```powershell
+.\create-plugin-zip.ps1
+```
+
+All scripts:
+- Extract plugin name and version from `plugin.cfg`
+- Use `git archive` to export only tracked files
+- Create ZIP file: `{pluginname}-{version}.zip`
+- Ready for upload to LoxBerry plugin manager
+
+### Manual Deployment to LoxBerry
+
+Using rsync (excluding dev files):
+```bash
+rsync -avz --exclude 'dev' --exclude 'data' --exclude '.git' \
+      . loxberry@<ip>:/opt/loxberry/webfrontend/htmlauth/plugins/loxberry-bmw-cardata/
+```
+
+## Web Interface Features
+
+### Step-by-Step OAuth Flow
+The web interface displays a visual step-by-step guide with status indicators:
+
+1. **Step 1: Konfiguration** - Configure Client ID and BMW settings
+   - Shows blue arrow (→) when current step
+   - Shows green checkmark (✓) when completed
+
+2. **Step 2: BMW Anmeldung** - Initiate OAuth Device Code Flow
+   - User clicks button to start authentication
+   - Displays user code and verification link
+   - Opens BMW login page
+
+3. **Step 3: Warten auf Anmeldung** - Poll for authorization completion
+   - Automatic polling every 5 seconds
+   - Shows progress while waiting for user to authorize
+
+4. **Step 4: Verbindung herstellen** - MQTT bridge connection
+   - Start/stop/restart daemon controls
+   - Display bridge status and logs
+
+### Online Help Integration
+The web interface supports LoxBerry's online help system via `helplink` parameter in `lbheader()`. Users can access context-sensitive help documentation.
+
+### Active Tab Marking
+Navigation tabs are visually marked:
+- Active tab: Green background
+- Inactive tabs: Default styling
+- Improves user orientation in multi-page interfaces
+
+## UI Styling
+
+The web interface includes embedded jQuery UI theme styles for consistent appearance:
+- Button styles (ui-button)
+- State indicators (ui-state-default, ui-state-active, ui-state-highlight, ui-state-error)
+- Widget styles (ui-widget, ui-widget-content, ui-widget-header)
+- Corner rounding (ui-corner-all, ui-corner-top, ui-corner-bottom)
+
+These styles ensure the plugin works even if LoxBerry's jQuery UI CSS is not loaded.
+
 - Before doing any plannings or modifications, always check for changes first. I always change files myself to improve the code.
