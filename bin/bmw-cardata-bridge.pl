@@ -24,8 +24,8 @@ use constant {
     BMW_MQTT_PROTOCOL => 'mqtts',         # MQTT over SSL/TLS
     RECONNECT_DELAY_INITIAL => 10,        # Initial reconnect delay: 10 seconds
     RECONNECT_DELAY_MAX => 86400,         # Maximum reconnect delay: 24 hours
-    TOKEN_CHECK_INTERVAL => 300,          # Check token expiry every 5 minutes
-    TOKEN_REFRESH_MARGIN => 600,          # Refresh when < 10 minutes left
+    TOKEN_CHECK_INTERVAL => 150,          # Check token expiry every 2,5 minutes
+    TOKEN_REFRESH_MARGIN => 90,           # Refresh when < 90 s left
 };
 
 # Plugin directories
@@ -484,7 +484,7 @@ sub connect_to_bmw_mqtt {
             },
         );
 
-        LOGOK("MQTT connection object created successfully");
+        LOGINF("MQTT connection object created successfully");
 
         # Subscribe to topics for each VIN
         my @vins = @{$current_config->{vins} || []};
@@ -540,7 +540,7 @@ sub connect_to_bmw_mqtt {
             }
         }
 
-        LOGOK("Subscriptions registered");
+        LOGINF("Subscriptions registered");
     };
 
     if ($@) {

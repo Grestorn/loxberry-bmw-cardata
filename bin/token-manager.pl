@@ -90,7 +90,7 @@ sub check_and_refresh {
     } else {
         my $time_left = $expires_at - $now;
         my $minutes_left = int($time_left / 60);
-        LOGOK("Tokens are valid. Expires in $minutes_left minutes.");
+        LOGINF("Tokens are valid. Expires in $minutes_left minutes.");
         LOGEND;
         return 0;
     }
