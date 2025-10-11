@@ -5,6 +5,8 @@
 
 use strict;
 use warnings;
+use utf8;
+use open ':std', ':encoding(UTF-8)';
 use FindBin qw($RealBin);
 use lib "$RealBin";
 
@@ -38,7 +40,8 @@ my $template = HTML::Template->new(
     filename => "$LoxBerryMock::lbptemplatedir/index.html",
     global_vars => 1,
     loop_context_vars => 1,
-    die_on_bad_params => 0
+    die_on_bad_params => 0,
+    utf8 => 1
 );
 
 # Language

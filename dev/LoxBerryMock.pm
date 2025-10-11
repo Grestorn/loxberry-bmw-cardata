@@ -47,8 +47,12 @@ use HTML::Template;
 sub readlanguage {
     my ($template, $filename) = @_;
 
-    # Determine language (default to English)
-    my $lang = $ENV{LOXBERRY_LANG} || 'en';
+    # Ensure UTF-8 handling
+    use utf8;
+    use open ':std', ':encoding(UTF-8)';
+
+    # Determine language (default to German for local dev)
+    my $lang = $ENV{LOXBERRY_LANG} || 'de';
     my $langfile = "$LoxBerryMock::lbptemplatedir/lang/language_$lang.ini";
 
     # Fallback to English if language file doesn't exist
@@ -81,6 +85,11 @@ sub readlanguage {
 
                 my $full_key = $section ? "$section.$key" : $key;
                 $translations{$full_key} = $value;
+
+                # Also set in template if provided
+                if ($template) {
+                    $template->param($full_key => $value);
+                }
             }
         }
         close($fh);
@@ -89,8 +98,9 @@ sub readlanguage {
     return %translations;
 }
 
-sub lbheader {
-    my ($title, $helplink, $helptemplate) = @_;
+sub head {
+    my ($title) = @_;
+    $title = $title || 'LoxBerry Plugin';
 
     print "Content-Type: text/html; charset=UTF-8\n\n";
     print qq{<!DOCTYPE html>
@@ -154,6 +164,14 @@ sub lbheader {
             font-family: Arial, sans-serif;
         }
     </style>
+};
+}
+
+sub pagestart {
+    my ($title, $helplink, $helptemplate) = @_;
+    $title = $title || 'LoxBerry Plugin';
+
+    print qq{
 </head>
 <body>
     <div class="loxberry-header">
@@ -163,6 +181,12 @@ sub lbheader {
         <strong>⚠ Local Development Mode</strong> - Running on Windows. Some features may not work as expected.
     </div>
 };
+}
+
+sub lbheader {
+    my ($title, $helplink, $helptemplate) = @_;
+    head($title);
+    pagestart($title, $helplink, $helptemplate);
 }
 
 sub lbfooter {

@@ -35,19 +35,20 @@ $tempDir = Join-Path $env:TEMP "loxberry-plugin-$(Get-Random)"
 $pluginDir = Join-Path $tempDir $pluginName
 New-Item -ItemType Directory -Path $pluginDir -Force | Out-Null
 
-# Use git archive to export all tracked files
+# Use git archive to export all tracked files to the plugin directory
+# git archive creates a tar by default, which we pipe directly to tar for extraction
 git archive HEAD | tar -x -C $pluginDir
 
-# Create ZIP archive
-Push-Location $tempDir
-Compress-Archive -Path $pluginName -DestinationPath $zipName -Force
-
-# Move ZIP to original directory
+# Create ZIP archive using tar (more compatible with Unix systems than Compress-Archive)
+# tar on Windows 10+ supports creating ZIP files
 $originalDir = $PSScriptRoot
-Move-Item $zipName $originalDir -Force
+$zipPath = Join-Path $originalDir $zipName
+
+Push-Location $tempDir
+tar -c -f $zipPath --format=zip $pluginName
+Pop-Location
 
 # Cleanup
-Pop-Location
 Remove-Item $tempDir -Recurse -Force
 
 Write-Host ""

@@ -14,6 +14,7 @@ chdir("$RealBin/..");
 {
     package MyWebServer;
     use base qw(HTTP::Server::Simple::CGI);
+    use FindBin qw($RealBin);
 
     sub handle_request {
         my ($self, $cgi) = @_;
@@ -32,19 +33,24 @@ chdir("$RealBin/..");
 
             if (-f $script) {
                 # Execute the CGI script
+                # Set up minimal CGI environment
                 local $ENV{GATEWAY_INTERFACE} = 'CGI/1.1';
-                local $ENV{REQUEST_METHOD} = $cgi->request_method();
-                local $ENV{QUERY_STRING} = $cgi->query_string();
-                local $ENV{CONTENT_TYPE} = $cgi->content_type();
-                local $ENV{CONTENT_LENGTH} = $cgi->content_length() || 0;
+                local $ENV{REQUEST_METHOD} = $cgi->request_method() || 'GET';
+                local $ENV{QUERY_STRING} = $cgi->query_string() || '';
+                local $ENV{CONTENT_TYPE} = $cgi->content_type() || '';
+                local $ENV{CONTENT_LENGTH} = $ENV{CONTENT_LENGTH} || 0;
 
                 # Execute the script and capture output
                 open(my $fh, '-|', "perl", $script) or die "Cannot execute $script: $!";
-                local $/;
-                my $output = <$fh>;
-                close($fh);
 
-                print $output;
+                # Always send HTTP status line first
+                print "HTTP/1.0 200 OK\r\n";
+
+                # Read and forward CGI output (headers and body)
+                while (my $line = <$fh>) {
+                    print $line;
+                }
+                close($fh);
             } else {
                 print "HTTP/1.0 404 Not Found\r\n";
                 print "Content-Type: text/html\r\n\r\n";

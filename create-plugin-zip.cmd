@@ -32,12 +32,10 @@ mkdir "%TEMP_DIR%\%PLUGIN_NAME%"
 REM Use git archive to export all tracked files
 git archive HEAD | tar -x -C "%TEMP_DIR%\%PLUGIN_NAME%"
 
-REM Create ZIP archive
+REM Create ZIP archive using tar (more compatible with Unix systems)
+REM tar on Windows 10+ supports creating ZIP files with --format=zip
 cd /d "%TEMP_DIR%"
-powershell -command "Compress-Archive -Path '%PLUGIN_NAME%' -DestinationPath '%ZIP_NAME%' -Force"
-
-REM Move ZIP to original directory
-move "%ZIP_NAME%" "%~dp0" > nul
+tar -c -f "%~dp0%ZIP_NAME%" --format=zip "%PLUGIN_NAME%"
 
 REM Cleanup
 cd /d "%~dp0"
