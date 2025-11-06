@@ -1,3 +1,20 @@
+#### 1.0.0 (2025-11-06)
+
+##### Continuous Integration
+
+*  Improved local dev environment (7d472f5d)
+
+##### Bug Fixes
+
+* **UI:**  Added missing style definitions (2855cbf2)
+*  Tightened logging and timing (35b903a7)
+
+##### Other Changes (improve)
+
+* **Help:**
+  *  Blur VIN and Client-ID (a68ad3ed)
+  *  Fixed help texts to fit small frame (ba6b510d)
+
 #### 0.4.8 (2025-10-10)
 
 ##### Continuous Integration
