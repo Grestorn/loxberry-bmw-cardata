@@ -140,8 +140,13 @@ Nach dem Speichern der Konfiguration erscheint der Anmeldungsprozess:
 ##### 6.2 BMW-Anmeldung durchführen (Schritt 4 im Plugin)
 
 1. Button **"Zur BMW Anmeldung"** klicken (öffnet ein neues Browser-Fenster)
-2. Mit **BMW-ID** (E-Mail und Passwort) anmelden
-3. Die **Autorisierungsanfrage bestätigen**
+2. **Wichtig:** Der Anmeldecode wird im Plugin angezeigt und bleibt sichtbar
+3. Mit **BMW-ID** (E-Mail und Passwort) anmelden
+4. **Falls BMW nach einem Code fragt:**
+   - Kopiere den im Plugin angezeigten Code (z.B. `ABC-DEF`)
+   - Füge ihn auf der BMW-Webseite ein
+   - In den meisten Fällen ist der Code bereits vorausgefüllt
+5. Die **Autorisierungsanfrage bestätigen**
 
 > **⚠️ Wichtig:** Der Code ist 5 Minuten gültig. Die Restzeit wird im Plugin angezeigt.
 
@@ -399,8 +404,13 @@ After saving the configuration, the authentication process appears:
 ##### 6.2 Perform BMW Authentication (Step 4 in Plugin)
 
 1. Click the **"Go to BMW Login"** button (opens a new browser window)
-2. Log in with your **BMW ID** (email and password)
-3. **Confirm the authorization request**
+2. **Important:** The authentication code is displayed in the plugin and remains visible
+3. Log in with your **BMW ID** (email and password)
+4. **If BMW asks for a code:**
+   - Copy the code displayed in the plugin (e.g., `ABC-DEF`)
+   - Paste it into the BMW website
+   - In most cases, the code is already pre-filled
+5. **Confirm the authorization request**
 
 > **⚠️ Important:** The code is valid for 5 minutes. The remaining time is displayed in the plugin.
 

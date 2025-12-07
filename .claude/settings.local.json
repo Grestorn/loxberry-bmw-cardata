@@ -18,7 +18,9 @@
       "Bash(git log:*)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:loxberry.home)"
+      "WebFetch(domain:loxberry.home)",
+      "Bash(bash:*)",
+      "Bash(tar:*)"
     ],
     "deny": [],
     "ask": []

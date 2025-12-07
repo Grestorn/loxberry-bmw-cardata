@@ -237,19 +237,18 @@
                 </TMPL_IF>
                 <strong>4.</strong> <TMPL_VAR OAUTH.STEP4>
                 <div style="margin-left: 28px;">
-                    <form method="post" action="index.cgi" id="bmw-login-form">
-                        <input type="hidden" name="action" value="bmw_login_clicked">
-                        <button type="button" class="ui-button ui-widget ui-corner-all" style="margin-top: 10px;"
-                                <TMPL_IF OAUTH_VERIFICATION_URI>
-                                onclick="window.open('<TMPL_VAR OAUTH_VERIFICATION_URI ESCAPE=JS>', '_blank'); document.getElementById('bmw-login-form').submit(); return false;"
-                                <TMPL_ELSE>
-                                disabled
-                                </TMPL_IF>>
-                            <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
-                        </button>
-                    </form>
+                    <button type="button" class="ui-button ui-widget ui-corner-all" style="margin-top: 10px;"
+                            <TMPL_IF OAUTH_VERIFICATION_URI>
+                            onclick="window.open('<TMPL_VAR OAUTH_VERIFICATION_URI ESCAPE=JS>', '_blank');"
+                            <TMPL_ELSE>
+                            disabled
+                            </TMPL_IF>>
+                        <TMPL_VAR OAUTH.OPEN_BMW_LOGIN>
+                    </button>
                     <TMPL_IF OAUTH_VERIFICATION_URI>
                     <p style="color: #666; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.CODE_EXPIRES>: <TMPL_VAR OAUTH_EXPIRES_MINUTES> <TMPL_VAR STATUS.MINUTES></p>
+                    <p style="margin-top: 10px; font-size: 1.1em;"><strong><TMPL_VAR OAUTH.USER_CODE_DISPLAY>:</strong> <code style="background-color: #f4f4f4; padding: 4px 8px; border-radius: 3px; font-size: 1.2em; letter-spacing: 2px;"><TMPL_VAR OAUTH_USER_CODE></code></p>
+                    <p style="margin-top: 8px; color: #0066cc; font-size: 0.9em;"><strong>ℹ</strong> <TMPL_VAR OAUTH.USER_CODE_HINT></p>
                     <TMPL_ELSE>
                     <p style="color: #999; font-size: 0.9em; margin-top: 5px;"><TMPL_VAR OAUTH.NEED_DEVICE_CODE></p>
                     </TMPL_IF>

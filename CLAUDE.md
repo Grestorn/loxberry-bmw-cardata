@@ -592,7 +592,11 @@ The web interface displays a visual step-by-step guide with status indicators:
 2. **Step 2: BMW Anmeldung** - Initiate OAuth Device Code Flow
    - User clicks button to start authentication
    - Displays user code and verification link
-   - Opens BMW login page
+   - Opens BMW login page in new window
+   - **Important**: The user code is displayed prominently below the button with copy-friendly formatting
+   - If BMW's website asks for a code (not pre-filled), user can copy it from the plugin interface
+   - Helpful hint text is displayed explaining how to use the code
+   - Code remains visible on the page (no page reload when opening BMW login)
 
 3. **Step 3: Warten auf Anmeldung** - Poll for authorization completion
    - Automatic polling every 5 seconds
@@ -610,6 +614,19 @@ Navigation tabs are visually marked:
 - Active tab: Green background
 - Inactive tabs: Default styling
 - Improves user orientation in multi-page interfaces
+
+### Device Code Display (OAuth Step 4)
+The user/device code is displayed with special UX considerations:
+- **Persistent Display**: Code remains visible after clicking "Zur BMW Anmeldung" button (no form submission/page reload)
+- **Copy-Friendly Formatting**: Displayed in monospace font with increased letter-spacing and background
+- **Visual Hierarchy**:
+  - Expiration time shown first (gray, smaller text)
+  - User code label + code (larger, prominent)
+  - Instructional hint (blue info icon, explaining manual entry if needed)
+- **Technical Implementation**:
+  - Button uses `onclick="window.open(...)"` instead of form submission
+  - Template variables: `OAUTH_USER_CODE`, `USER_CODE_DISPLAY`, `USER_CODE_HINT`
+  - CGI sets these from `device_code.json` (webfrontend/htmlauth/index.cgi:145-150)
 
 ## UI Styling
 
