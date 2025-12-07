@@ -1,0 +1,41 @@
+# Exclusion patterns for plugin ZIP creation
+# Note: This file is for documentation only.
+# The scripts have the exclusion patterns hardcoded for better cross-platform compatibility.
+
+# Version control
+.git
+.git\*
+.gitignore
+.github
+.github\*
+
+# IDE and editor files
+.idea
+.idea\*
+.claude
+.claude\*
+
+# Dependencies
+node_modules
+node_modules\*
+
+# Development tools
+dev
+dev\*
+
+# Build artifacts
+*.zip
+*.tar.gz
+
+# Node.js project files (only used for release automation)
+package.json
+package-lock.json
+
+# Build scripts themselves
+create-plugin-zip.cmd
+create-plugin-zip.sh
+create-plugin-zip.ps1
+create-plugin-zip.exclude
+
+# Documentation for AI assistant
+CLAUDE.md

@@ -30,3 +30,5 @@ Thumbs.db
 # (these would be on the LoxBerry system, not in development)
 /opt/loxberry/
 /data/
+/bmw-cardata-1.0.0.zip
+/bmw-cardata-1.0.0-snapshot.zip

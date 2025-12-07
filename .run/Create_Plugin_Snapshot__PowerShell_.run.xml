@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Create Plugin Snapshot (PowerShell)" type="PowerShellRunType" factoryName="PowerShell" folderName="Build">
+    <option name="scriptPath" value="$PROJECT_DIR$/create-plugin-zip.ps1" />
+    <option name="workingDirectory" value="$PROJECT_DIR$" />
+    <option name="scriptParameters" value="" />
+    <option name="executionPolicy" value="Bypass" />
+    <method v="2" />
+  </configuration>
+</component>
