@@ -4,638 +4,183 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a LoxBerry plugin for BMW CarData API integration. The plugin bridges BMW's CarData MQTT interface with the LoxBerry MQTT Gateway, enabling Loxone home automation integration with BMW vehicle data.
+LoxBerry plugin that bridges BMW's CarData MQTT streaming interface with the LoxBerry MQTT Gateway, enabling Loxone home automation integration with real-time BMW vehicle data (door status, battery level, GPS, tire pressure, etc.).
 
-**Core Functionality:**
-- OAuth 2.0 authentication with BMW CarData API
-- Automatic token refresh management
-- MQTT message bridging between BMW CarData and LoxBerry MQTT Gateway
-- Web interface for configuration and OAuth flow
+- **Perl** is the primary language (LoxBerry plugin standard)
+- **Node.js** is used only for release automation (not part of plugin runtime)
+- **Commit format**: Use conventional commits (`feat:`, `fix:`, `docs:`, `improve:`, `type(ci):`) for changelog generation
 
-**References:**
-- BMW CarData API: https://bmw-cardata.bmwgroup.com/customer/public/api-documentation
-- LoxBerry MQTT Gateway: https://wiki.loxberry.de/konfiguration/widget_help/widget_mqtt
-- Plugin Developer Guide: https://wiki.loxberry.de/konfiguration/widget_help/widget_mqtt/mqtt_gateway/mqtt_gateway_for_plugin_developers
+## Architecture
 
-## LoxBerry Plugin Architecture
+The plugin has six components connected in a pipeline:
 
-LoxBerry plugins are installed to `/opt/loxberry/` with the following structure:
-
-### Directory Structure (Development vs. Installed)
-
-**Development (this repo):**
 ```
-loxberry-bmw-cardata/
-├── webfrontend/htmlauth/     → /opt/loxberry/webfrontend/htmlauth/plugins/loxberry-bmw-cardata/
-├── templates/                → /opt/loxberry/templates/plugins/loxberry-bmw-cardata/
-├── bin/                      → /opt/loxberry/bin/plugins/loxberry-bmw-cardata/
-├── data/                     → /opt/loxberry/data/plugins/loxberry-bmw-cardata/
-├── config/                   → /opt/loxberry/config/plugins/loxberry-bmw-cardata/
-├── cron/                     → Installed to /etc/cron.d/
-├── daemon/                   → Boot-time daemon scripts
-├── icons/                    → Plugin icons
-├── uninstall/                → Uninstallation scripts
-├── plugin.cfg                → Plugin metadata
-├── release.cfg               → Auto-update configuration (releases)
-├── prerelease.cfg            → Auto-update configuration (prereleases)
-├── preinstall.sh             → Pre-installation hook
-├── postinstall.sh            → Post-installation hook
-├── preupgrade.sh             → Pre-upgrade hook
-└── postupgrade.sh            → Post-upgrade hook
+BMW CarData API  -->  OAuth Scripts  -->  tokens.json  -->  MQTT Bridge  -->  LoxBerry MQTT Gateway  -->  Loxone
+                      (bin/*.pl)          (data/)           (daemon)          (local broker)
 ```
 
-### Key Directories
+### Multi-Account Architecture
 
-- **webfrontend/htmlauth/**: Web interface requiring authentication
-  - `index.cgi`: Main web interface (Perl CGI)
-  - CGI scripts have access to LoxBerry modules
+The plugin supports multiple BMW accounts (multi-tenant). Each account is stored in its own subdirectory under `data/accounts/{account-id}/`. All bin scripts require `--account <id>` parameter. One bridge daemon process runs per account.
 
-- **templates/**: HTML templates and language files
-  - `index.html`: Main HTML template
-  - `lang/language_de.ini`, `lang/language_en.ini`: Translations
-
-- **bin/**: Executable scripts (daemon processes, background workers)
-  - Not accessible via web
-  - Use for OAuth token refresh daemon, MQTT bridge script
-
-- **data/**: Plugin data storage
-  - Store OAuth tokens here (e.g., `tokens.json`)
-  - Persists across plugin upgrades
-
-- **config/**: Configuration files
-  - Store plugin settings (e.g., `plugin.json`)
-  - Persists across plugin upgrades
-
-- **cron/**: Cron job definitions and boot scripts
-  - `crontab`: Traditional cron format (currently unused, kept for future use)
-  - `cron.reboot`: Executed at system boot - starts MQTT bridge daemon
-  - `cron.10min`: Executed every 10 minutes - refreshes OAuth tokens
-  - All scripts run as 'loxberry' user
-  - LoxBerry manages scheduling automatically
-
-- **daemon/**: Boot-time daemon scripts (DEPRECATED - use cron.reboot instead)
-  - Legacy approach: `daemon` script runs as 'root' at boot
-  - Modern approach: Use `cron/cron.reboot` which runs as 'loxberry'
-
-- **icons/**: Plugin icons for LoxBerry UI
-
-- **uninstall/**: Uninstallation scripts
-  - `uninstall`: Executed when plugin is uninstalled
-  - Should stop running daemons gracefully
-  - Can optionally clean up data files
-
-## LoxBerry Plugin Lifecycle Scripts
-
-- **preinstall.sh**: Runs before plugin installation
-- **postinstall.sh**: Runs after plugin installation
-- **preupgrade.sh**: Runs before plugin upgrade
-- **postupgrade.sh**: Runs after plugin upgrade
-
-## Key Technologies
-
-- **Perl**: Primary language for LoxBerry plugins
-  - Uses LoxBerry::System, LoxBerry::Web modules
-  - CGI for web interface
-  - HTML::Template for templating
-- **Node.js**: Used for release automation only (not part of plugin runtime)
-
-## Release Management
-
-The project uses an automated release system powered by Node.js scripts:
-
-### Release Commands
-```bash
-npm run release:major    # Major release (x.0.0)
-npm run release:minor    # Minor release (0.x.0)
-npm run release:patch    # Patch release (0.0.x)
-npm run pre:major        # Major prerelease (x.0.0-rc)
-npm run pre:minor        # Minor prerelease (0.x.0-rc)
-npm run pre:patch        # Patch prerelease (0.0.x-rc)
+```
+data/accounts/
+├── martin/           # Account "Martin's BMW"
+│   ├── config.json
+│   ├── tokens.json
+│   ├── device_code.json  (temporary)
+│   ├── pkce.json         (temporary)
+│   └── bridge.pid
+└── sarah/            # Account "Sarah's BMW"
+    ├── config.json
+    ├── tokens.json
+    └── bridge.pid
 ```
 
-### Release Process
-The `.github/release.js` script automates:
-1. Git environment validation (must be clean)
-2. Version bumping in package.json
-3. Updating plugin.cfg with new version
-4. Updating release.cfg or prerelease.cfg with version and archive URL
-5. Changelog generation from git commits (uses [conventional commits](https://github.com/lob/generate-changelog))
-6. Git commit, tag creation, and push to remote
+### Component Files
 
-### Release Configuration
-In package.json, you can configure:
-```json
-{
-  "config": {
-    "release": {
-      "additionalNodeModules": ["bin"],  // Additional package.json locations
-      "additionalCommands": [
-        {
-          "command": "npm run build",
-          "gitFiles": "webfrontend templates"  // Files to stage after command
-        }
-      ]
-    }
-  }
-}
-```
+| Component | File | Purpose |
+|-----------|------|---------|
+| Web Interface | `webfrontend/htmlauth/index.cgi` | CGI script: account management, config forms, OAuth flow UI, bridge control |
+| OAuth Init | `bin/oauth-init.pl` | PKCE + device code request to BMW API. `--account <id>` required |
+| OAuth Poll | `bin/oauth-poll.pl` | Polls BMW for tokens after user authorizes. `--account <id>` required |
+| Token Manager | `bin/token-manager.pl` | Commands: `check`, `refresh`, `status`. `--account <id>` required |
+| MQTT Bridge | `bin/bmw-cardata-bridge.pl` | Daemon: connects to BMW MQTTS per account. `--account <id>` required |
+| Bridge Control | `bin/bridge-control.sh` | `--account <id> {start|stop|restart|status|logs}` or `{start-all|stop-all}` |
 
-## MQTT Gateway Integration
+### Data Flow and Separation of Concerns
 
-LoxBerry provides MQTT infrastructure that this plugin uses to communicate with BMW CarData.
+- **Token Manager** (cron job) is solely responsible for refreshing tokens. It writes to `data/accounts/<id>/tokens.json`.
+- **MQTT Bridge** (daemon) does NOT refresh tokens. It monitors `tokens.json` every 2.5 minutes and reconnects when it detects a new `id_token`.
+- **Web Interface** calls the bin scripts via `system()` with `--account` parameter and reads JSON files for status display.
+- **Cron jobs** loop over all `data/accounts/*/` directories to manage all accounts.
 
-### MQTT Connection Methods
+### Key Constants (from source code)
 
-**1. Get MQTT Server Details (Recommended for Perl):**
-```perl
-use LoxBerry::IO;
-my $creds = LoxBerry::IO::mqtt_connectiondetails();
-# Returns: brokeraddress, brokerport, brokeruser, brokerpass, udpinport
-```
+| Constant | Value | Location |
+|----------|-------|----------|
+| Token refresh margin | 15 min (900s) before expiry | `bin/token-manager.pl` |
+| Bridge token check interval | 2.5 min (150s) | `bin/bmw-cardata-bridge.pl` |
+| Cron token check | Every 10 min | `cron/cron.10min` |
+| Reconnect backoff | 10s initial, doubles up to 24h max | `bin/bmw-cardata-bridge.pl` |
+| Default stream port | 9000 (web UI default) | `webfrontend/htmlauth/index.cgi` |
+| Default MQTT prefix | `bmw-{account-id}` | `webfrontend/htmlauth/index.cgi` |
 
-**2. Publish MQTT Messages via UDP:**
-```perl
-# Easiest method - send to UDP in-port
-# Format: topic payload
-use IO::Socket::INET;
-my $sock = IO::Socket::INET->new(
-    PeerAddr => 'localhost',
-    PeerPort => $creds->{udpinport},
-    Proto => 'udp'
-);
-$sock->send("topic/path message_payload");
-```
+### Data Storage (per account in `data/accounts/{account-id}/`)
 
-**3. Direct MQTT Connection:**
-```perl
-use Net::MQTT::Simple;
-my $mqtt = Net::MQTT::Simple->new($creds->{brokeraddress});
-$mqtt->publish("topic/path", "message_payload");
-```
+- `config.json` - Account config (account_name, client_id, stream_host/port/username, VINs, mqtt_topic_prefix)
+- `tokens.json` - OAuth tokens (access_token, id_token, refresh_token, gcid, expires_at, refresh_expires_at)
+- `device_code.json` - Temporary: during OAuth device code flow
+- `pkce.json` - Temporary: PKCE code_verifier during OAuth flow
+- `bridge.pid` - PID file for bridge daemon
 
-### Plugin-Specific MQTT Configuration Files
+### Migration (v1.x single-account to v2.x multi-account)
 
-Place in plugin directory for MQTT Gateway integration:
-- **mqtt_subscriptions.cfg**: Custom MQTT topic subscriptions
-- **mqtt_conversions.cfg**: Custom message conversions
-- **mqtt_resetaftersend.cfg**: Topics that should reset after sending
-
-## BMW CarData Integration
-
-### OAuth 2.0 Device Code Flow
-
-BMW CarData uses **OAuth 2.0 Device Authorization Grant** (RFC 8628) instead of traditional redirect-based OAuth.
-
-**Base URL**: `https://customer.bmwgroup.com`
-
-#### Step 1: Generate Client ID
-- Create via BMW CarData Customer Portal
-- Client ID example: `cj5b3499-4918-40x6-a232-f4112f837d72`
-
-#### Step 2: Subscribe to Services
-Required scopes in portal:
-- **cardata:api:read** - For REST API access
-- **cardata:streaming:read** - For MQTT streaming
-
-#### Step 3: Device Code Flow
-
-**3.1: Request Device Code**
-```bash
-POST /gcdm/oauth/device/code
-Content-Type: application/x-www-form-urlencoded
-
-client_id=<your_client_id>
-response_type=device_code
-scope=authenticate_user openid cardata:streaming:read cardata:api:read
-code_challenge=<SHA256_hash_of_code_verifier>
-code_challenge_method=S256
-```
-
-Response contains:
-- `user_code` - User enters this in browser
-- `device_code` - Use for polling tokens
-- `verification_uri` - URL user visits to authorize
-- `verification_uri_complete` - URL with pre-filled code
-- `interval` - Minimum polling interval (seconds)
-- `expires_in` - Code lifetime (seconds)
-
-**3.2: User Authorization**
-- Direct user to `verification_uri_complete` (easiest)
-- User logs in with BMW credentials and authorizes device
-
-**3.3: Poll for Tokens**
-```bash
-POST /gcdm/oauth/token
-Content-Type: application/x-www-form-urlencoded
-
-client_id=<your_client_id>
-device_code=<device_code_from_step_1>
-grant_type=urn:ietf:params:oauth:grant-type:device_code
-code_verifier=<original_code_verifier>
-```
-
-Response contains three tokens:
-- **access_token** - For CarData REST API calls (valid 1 hour)
-- **id_token** - For MQTT streaming authentication (valid 1 hour)
-- **refresh_token** - To refresh both tokens (valid 2 weeks / 1,209,600 seconds)
-- **gcid** - User's unique identifier
-
-#### Step 4: Token Refresh
-
-**Before access_token/id_token expires (within 1 hour), refresh:**
-```bash
-POST /gcdm/oauth/token
-Content-Type: application/x-www-form-urlencoded
-
-grant_type=refresh_token
-refresh_token=<current_refresh_token>
-client_id=<your_client_id>
-```
-
-Returns new set of all three tokens with reset expiry timers.
-
-**Important:**
-- Refresh token expires after 2 weeks - must re-run device code flow if expired
-- If client unsubscribed from services, refresh token becomes invalid immediately
-- Use cron job to refresh tokens before expiry
-
-### MQTT Streaming Integration
-
-**Connection Details** (from portal after configuration):
-- **Host**: BMW MQTT broker address
-- **Port**: MQTT broker port (typically 8883 for SSL/TLS)
-- **Protocol**: MQTT over SSL/TLS
-- **Username**: Your GCID (from token response)
-- **Password**: Your **id_token** (not access_token!)
-- **Topic**: `<gcid>/<vin>` format
-
-**Streaming Configuration:**
-1. Subscribe to "CarData Streaming" in portal
-2. Click "Configure data stream" button
-3. Select which vehicle attributes to stream (e.g., location, battery, tire pressure)
-4. Portal displays connection credentials
-
-**Connection Constraints:**
-- Only ONE connection per GCID at a time
-- If multiple VINs: subscribe to each topic individually on same connection
-- When id_token expires: must reconnect with fresh id_token
-- Connection closes automatically when id_token expires (1 hour)
-
-**Perl MQTT Example:**
-```perl
-use Net::MQTT::Simple;
-my $mqtt = Net::MQTT::Simple->new("mqtts://bmw_host:8883");
-$mqtt->login($gcid, $id_token);  # Username = GCID, Password = ID token
-$mqtt->subscribe("$gcid/$vin", sub {
-    my ($topic, $message) = @_;
-    # Forward to LoxBerry MQTT Gateway
-});
-```
-
-### Error Codes
-
-Common authentication errors:
-- **CU-100**: No token sent
-- **CU-101**: Authentication error
-- **CU-102**: Token expired
-- **CU-103**: Token scope is not CarData
-- **CU-104**: Token invalid
-
-### Rate Limits
-
-- **REST API**: 50 requests per day
-- **Streaming**: No rate limit (use for frequent data access)
-
-## Actual Plugin Implementation
-
-The plugin consists of four main Perl scripts:
-
-### 1. Web Interface (webfrontend/htmlauth/index.cgi)
-- CGI script using LoxBerry::System, LoxBerry::Web, HTML::Template
-- Handles configuration (client_id, stream_host, VINs, MQTT prefix)
-- Initiates OAuth Device Code Flow via oauth-init.pl
-- Polls for tokens via oauth-poll.pl
-- Controls bridge daemon (start/stop/restart)
-- Displays bridge status and logs
-
-### 2. OAuth Initialization (bin/oauth-init.pl)
-- Generates PKCE code_verifier and code_challenge
-- Requests device code from BMW `/gcdm/oauth/device/code`
-- Saves device_code and pkce data to data/ directory
-- Returns user_code and verification_uri for user
-
-### 3. OAuth Polling (bin/oauth-poll.pl)
-- Polls BMW `/gcdm/oauth/token` for authorization completion
-- Saves access_token, id_token, refresh_token, gcid to data/tokens.json
-- Returns success/pending/error status
-
-### 4. Token Manager (bin/token-manager.pl)
-- Commands: `check`, `refresh`, `status`
-- Checks token expiry (refresh if < 5 minutes remaining)
-- Refreshes tokens using refresh_token
-- Called by cron/cron.30min every 30 minutes
-
-### 5. MQTT Bridge Daemon (bin/bmw-cardata-bridge.pl)
-- Runs as daemon process (--daemon flag)
-- Uses AnyEvent::MQTT for BMW CarData connection (MQTTS)
-- Uses Net::MQTT::Simple for LoxBerry MQTT Gateway
-- Subscribes to BMW topics: `<gcid>/<vin>`
-- Forwards messages to LoxBerry with configurable topic prefix
-- Monitors tokens.json file every 5 minutes for changes
-- Auto-reconnects when new id_token detected (refreshed by cron job)
-- Does NOT refresh tokens itself (that's the cron job's responsibility)
-- Handles SIGTERM, SIGINT (graceful shutdown), SIGHUP (reload config)
-- Creates PID file in data/bridge.pid
-
-### 6. Data Storage Structure
-**data/tokens.json:**
-```json
-{
-  "access_token": "...",
-  "id_token": "...",
-  "refresh_token": "...",
-  "gcid": "...",
-  "expires_at": 1234567890,
-  "refresh_expires_at": 1234567890
-}
-```
-
-**data/config.json:**
-```json
-{
-  "client_id": "...",
-  "stream_host": "...",
-  "stream_port": 8883,
-  "stream_username": "...",
-  "vins": ["VIN1", "VIN2"],
-  "mqtt_topic_prefix": "bmw-cardata"
-}
-```
-
-**data/device_code.json:** (temporary, during OAuth flow)
-```json
-{
-  "device_code": "...",
-  "user_code": "...",
-  "verification_uri": "...",
-  "verification_uri_complete": "...",
-  "interval": 5,
-  "expires_at": 1234567890
-}
-```
-
-**data/pkce.json:** (temporary, during OAuth flow)
-```json
-{
-  "code_verifier": "..."
-}
-```
+`postupgrade.sh` detects files in the flat `data/` root layout and migrates them to `data/accounts/default/`.
 
 ## LoxBerry Path Placeholders (CRITICAL)
 
-**NEVER use absolute paths in plugin code.** LoxBerry uses placeholders that are automatically replaced during installation:
+**NEVER use absolute paths in plugin code.** LoxBerry replaces these placeholders during installation:
 
-| Placeholder | Replaced with | Example |
-|-------------|--------------|---------|
-| `REPLACELBPPLUGINDIR` | Plugin directory name | `bmw-cardata` |
-| `REPLACELBPBINDIR` | `/opt/loxberry/bin/plugins/PLUGINNAME` | Plugin executables |
-| `REPLACELBPDATADIR` | `/opt/loxberry/data/plugins/PLUGINNAME` | Persistent data |
-| `REPLACELBPLOGDIR` | `/opt/loxberry/log/plugins/PLUGINNAME` | Log files |
-| `REPLACELBPCONFIGDIR` | `/opt/loxberry/config/plugins/PLUGINNAME` | Config files |
-| `REPLACELBPTEMPLDIR` | `/opt/loxberry/templates/plugins/PLUGINNAME` | Templates |
-| `REPLACELBPHTMLAUTHDIR` | `/opt/loxberry/webfrontend/htmlauth/plugins/PLUGINNAME` | Web interface |
+| Placeholder | Installed path |
+|-------------|---------------|
+| `REPLACELBPBINDIR` | `/opt/loxberry/bin/plugins/PLUGINNAME` |
+| `REPLACELBPDATADIR` | `/opt/loxberry/data/plugins/PLUGINNAME` |
+| `REPLACELBPLOGDIR` | `/opt/loxberry/log/plugins/PLUGINNAME` |
+| `REPLACELBPCONFIGDIR` | `/opt/loxberry/config/plugins/PLUGINNAME` |
+| `REPLACELBPTEMPLDIR` | `/opt/loxberry/templates/plugins/PLUGINNAME` |
+| `REPLACELBPHTMLAUTHDIR` | `/opt/loxberry/webfrontend/htmlauth/plugins/PLUGINNAME` |
+| `REPLACELBPPLUGINDIR` | Plugin directory name (e.g., `bmw-cardata`) |
 
-**In Perl CGI scripts**, use LoxBerry variables instead:
-- `$lbpbindir` - Binary directory
-- `$lbpdatadir` - Data directory
-- `$lbplogdir` - Log directory
-- `$lbpconfigdir` - Config directory
-- `$lbptemplatedir` - Template directory
+**In Perl CGI scripts**, use LoxBerry variables instead: `$lbpbindir`, `$lbpdatadir`, `$lbplogdir`, `$lbpconfigdir`, `$lbptemplatedir`
 
-**Reference:** https://wiki.loxberry.de/entwickler/plugin_fur_den_loxberry_entwickeln_ab_version_1x/automatisches_ersetzen_der_pluginverzeichnisse_replace
+## Directory Structure
 
-## Development Notes
+```
+webfrontend/htmlauth/  - Web interface (CGI, authenticated)
+templates/             - HTML templates + lang/ translations (language_de.ini, language_en.ini)
+bin/                   - Perl scripts + bridge-control.sh (not web-accessible)
+data/accounts/         - Per-account runtime data (tokens, config, PID) (persists across upgrades)
+config/                - Plugin config files (persists across upgrades)
+cron/                  - cron.reboot (start all bridges), cron.10min (refresh all tokens)
+dev/                   - Local development environment (mock LoxBerry, dev server)
+.github/release.js     - Automated release script
+```
 
-### Code Structure
-- Perl CGI scripts use LoxBerry's templating system (HTML::Template)
-- Language strings stored in templates/lang/ (loaded via LoxBerry::Web::readlanguage())
-- Web interface uses LoxBerry::Web for headers/footers (lbheader/lbfooter)
-- Plugin metadata from LoxBerry::System::plugindata()
+## Important Constraints
 
-### Important Constraints
-- **Path Placeholders**: ALWAYS use REPLACE* placeholders or LoxBerry variables, NEVER hardcoded paths
-- **MQTT Connection**: Only ONE BMW MQTT connection per GCID allowed
-- **Token Timing**: Refresh tokens BEFORE expiry (current: 5 min margin for 1-hour tokens)
-- **SSL/TLS**: BMW MQTT requires mqtts:// protocol
-- **Cron User**: All cron jobs run as 'loxberry' user, not root
-- **Commit Format**: Use conventional commits (feat:, fix:, docs:) for changelog generation
-- **Separation of Concerns**: Bridge daemon does NOT refresh tokens - it only detects when cron job has refreshed them and reconnects
+- **Path Placeholders**: ALWAYS use `REPLACE*` placeholders or LoxBerry variables, NEVER hardcoded paths
+- **One MQTT Connection**: BMW allows only ONE connection per GCID simultaneously
+- **BMW MQTT Auth**: Username = `stream_username` (from config), Password = `id_token` (NOT access_token)
+- **Token Timing**: Access/ID tokens valid 1 hour, refresh token valid 2 weeks
+- **Cron User**: All cron jobs run as `loxberry` user, not root
+- **Perl Dependencies**: `AnyEvent::MQTT` installed locally to `bin/perl5/` via cpanm in `postinstall.sh`
+- **Bridge uses `use lib "REPLACELBPBINDIR/perl5/lib/perl5"`** to find locally-installed modules
 
-### Testing & Debugging
-- Test OAuth flow: Run `bin/oauth-init.pl` manually, then `bin/oauth-poll.pl`
-- Test token refresh: `bin/token-manager.pl check` or `bin/token-manager.pl refresh --force`
-- Test bridge: `bin/bmw-cardata-bridge.pl` (without --daemon for foreground mode)
-- Check logs in data directory (tokens.json, config.json, device_code.json)
-- Bridge PID file: `data/bridge.pid`
-- LoxBerry logs: Use LoxBerry::Log module (LOGSTART, LOGINF, LOGERR, LOGEND)
+## Development Commands
 
-### MQTT Integration Options
-1. **UDP Method** (recommended for simple publishing):
-   ```perl
-   use LoxBerry::IO;
-   my $creds = LoxBerry::IO::mqtt_connectiondetails();
-   # Send to UDP port: "topic payload"
-   ```
-
-2. **Direct Connection** (for subscribing):
-   ```perl
-   use Net::MQTT::Simple;
-   my $mqtt = Net::MQTT::Simple->new($broker);
-   ```
-
-## Local Development Environment
-
-The project includes a complete local development environment that allows testing the web interface on Windows without deploying to LoxBerry.
-
-**Location:** `dev/` directory
-
-### Quick Start
-
-**Method 1: Simple Static Output (Fastest)**
+### Release
 ```bash
-cd dev
-./run-dev.bat
+npm run release:patch    # Patch release (0.0.x)
+npm run release:minor    # Minor release (0.x.0)
+npm run release:major    # Major release (x.0.0)
+npm run pre:patch        # Prerelease (0.0.x-rc)
 ```
-Generates static HTML output and opens in browser. Form actions won't work, but useful for UI testing.
 
-**Method 2: HTTP Server (Full Functionality)**
-Requires `HTTP::Server::Simple::CGI` Perl module:
+### Create Plugin ZIP
 ```bash
-cd dev
-./start-dev.bat
-```
-Starts HTTP server on http://localhost:8080/ with full CGI support.
-
-### Development Environment Components
-
-**dev/LoxBerryMock.pm** - Mock module simulating LoxBerry functionality:
-- `LoxBerry::System` - Plugin metadata
-- `LoxBerry::Web` - Web interface functions (readlanguage, lbheader, lbfooter)
-- `LoxBerry::JSON` - JSON handling
-- `LoxBerry::Log` - Logging (dummy implementation)
-- `LoxBerry::IO` - MQTT configuration
-
-**dev/index-dev.cgi** - Development version of web interface that uses mock modules
-
-**dev/start-dev-server.pl** - Simple HTTP server with CGI support
-
-**Path Mappings in Development:**
-| LoxBerry Variable | Local Path |
-|-------------------|------------|
-| `$lbptemplatedir` | `templates/` |
-| `$lbpdatadir` | `data/` |
-| `$lbpbindir` | `bin/` |
-| `$lbplogdir` | `data/logs/` |
-| `$lbpconfigdir` | `config/` |
-
-### What Works in Dev Mode
-
-✅ **Working:**
-- Web interface display
-- Configuration forms
-- Step indicators with icons
-- Save configuration to `data/config.json`
-- Page navigation
-- Language files (German/English via `LOXBERRY_LANG` env var)
-
-❌ **Not Working (LoxBerry only):**
-- OAuth authentication (requires `bin/oauth-init.pl`, `bin/oauth-poll.pl`)
-- Token refresh (requires `bin/token-manager.pl`)
-- Bridge control (requires `bin/bridge-control.sh`)
-- Log viewing (requires LoxBerry log system)
-
-### Simulating Different States
-
-**Not Authenticated:**
-Delete `data/tokens.json`
-
-**Authenticated:**
-Create `data/tokens.json`:
-```json
-{
-  "gcid": "test-gcid-123",
-  "access_token": "test-access-token",
-  "id_token": "test-id-token",
-  "refresh_token": "test-refresh-token",
-  "expires_at": 9999999999,
-  "refresh_expires_at": 9999999999
-}
+./create-plugin-zip.sh   # Linux/macOS/Git Bash
 ```
 
-**Device Code Flow Active:**
-Create `data/device_code.json`:
-```json
-{
-  "device_code": "test-device-code",
-  "user_code": "ABC-DEF",
-  "verification_uri": "https://www.bmw.de/verify",
-  "verification_uri_complete": "https://www.bmw.de/verify?code=ABC-DEF",
-  "expires_in": 600,
-  "interval": 5
-}
-```
-
-## Plugin Deployment
-
-### Creating Plugin Archives
-
-The project includes three scripts for creating deployment-ready ZIP archives:
-
-**create-plugin-zip.sh** (Linux/macOS/Git Bash):
+### Local Development (Windows)
 ```bash
-./create-plugin-zip.sh
+cd dev && ./run-dev.bat          # Static HTML output, opens in browser
+cd dev && ./start-dev.bat        # HTTP server at http://localhost:8080/ with CGI
 ```
 
-**create-plugin-zip.cmd** (Windows CMD):
-```cmd
-create-plugin-zip.cmd
-```
-
-**create-plugin-zip.ps1** (Windows PowerShell):
-```powershell
-.\create-plugin-zip.ps1
-```
-
-All scripts:
-- Extract plugin name and version from `plugin.cfg`
-- Use `git archive` to export only tracked files
-- Create ZIP file: `{pluginname}-{version}.zip`
-- Ready for upload to LoxBerry plugin manager
-
-### Manual Deployment to LoxBerry
-
-Using rsync (excluding dev files):
+### Testing on LoxBerry
 ```bash
-rsync -avz --exclude 'dev' --exclude 'data' --exclude '.git' \
-      . loxberry@<ip>:/opt/loxberry/webfrontend/htmlauth/plugins/loxberry-bmw-cardata/
+bin/oauth-init.pl --account myaccount                    # Start OAuth device code flow
+bin/oauth-poll.pl --account myaccount                    # Poll for tokens after user authorizes
+bin/token-manager.pl --account myaccount check           # Check and refresh tokens if needed
+bin/token-manager.pl --account myaccount refresh --force # Force token refresh
+bin/token-manager.pl --account myaccount status          # Show token status
+bin/bmw-cardata-bridge.pl --account myaccount            # Run bridge in foreground (debug)
+bin/bmw-cardata-bridge.pl --account myaccount --daemon   # Run bridge as daemon
+bin/bridge-control.sh --account myaccount status         # Check bridge status
+bin/bridge-control.sh start-all                          # Start all account bridges
+bin/bridge-control.sh stop-all                           # Stop all account bridges
 ```
 
-## Web Interface Features
+## Local Dev Environment
 
-### Step-by-Step OAuth Flow
-The web interface displays a visual step-by-step guide with status indicators:
+`dev/LoxBerryMock.pm` mocks `LoxBerry::System`, `LoxBerry::Web`, `LoxBerry::JSON`, `LoxBerry::Log`, `LoxBerry::IO`. `dev/index-dev.cgi` is the dev version of the web interface that uses these mocks.
 
-1. **Step 1: Konfiguration** - Configure Client ID and BMW settings
-   - Shows blue arrow (→) when current step
-   - Shows green checkmark (✓) when completed
+**Simulate states** by creating/deleting files in `data/accounts/{account-id}/`:
+- Delete `tokens.json` = not authenticated
+- Create `tokens.json` with `expires_at: 9999999999` = authenticated
+- Create `device_code.json` = OAuth flow in progress
+- Create/delete account directories to simulate multi-account scenarios
 
-2. **Step 2: BMW Anmeldung** - Initiate OAuth Device Code Flow
-   - User clicks button to start authentication
-   - Displays user code and verification link
-   - Opens BMW login page in new window
-   - **Important**: The user code is displayed prominently below the button with copy-friendly formatting
-   - If BMW's website asks for a code (not pre-filled), user can copy it from the plugin interface
-   - Helpful hint text is displayed explaining how to use the code
-   - Code remains visible on the page (no page reload when opening BMW login)
+## Web Interface Structure
 
-3. **Step 3: Warten auf Anmeldung** - Poll for authorization completion
-   - Automatic polling every 5 seconds
-   - Shows progress while waiting for user to authorize
+The CGI script (`index.cgi`) uses:
+- `HTML::Template` with template at `templates/index.html`
+- Language files loaded via `LoxBerry::Web::readlanguage()` from `templates/lang/`
+- `LoxBerry::Web::lbheader()`/`lbfooter()` for page chrome
+- Action routing via `$cgi->param('action')` dispatching to `handle_*` subs
+- Account routing via `$cgi->param('account')` selecting the active account
+- Account selector bar at top with create/delete controls
+- Two pages: `main` (config + OAuth + bridge status) and `logs`
 
-4. **Step 4: Verbindung herstellen** - MQTT bridge connection
-   - Start/stop/restart daemon controls
-   - Display bridge status and logs
+## LoxBerry Perl Conventions
 
-### Online Help Integration
-The web interface supports LoxBerry's online help system via `helplink` parameter in `lbheader()`. Users can access context-sensitive help documentation.
-
-### Active Tab Marking
-Navigation tabs are visually marked:
-- Active tab: Green background
-- Inactive tabs: Default styling
-- Improves user orientation in multi-page interfaces
-
-### Device Code Display (OAuth Step 4)
-The user/device code is displayed with special UX considerations:
-- **Persistent Display**: Code remains visible after clicking "Zur BMW Anmeldung" button (no form submission/page reload)
-- **Copy-Friendly Formatting**: Displayed in monospace font with increased letter-spacing and background
-- **Visual Hierarchy**:
-  - Expiration time shown first (gray, smaller text)
-  - User code label + code (larger, prominent)
-  - Instructional hint (blue info icon, explaining manual entry if needed)
-- **Technical Implementation**:
-  - Button uses `onclick="window.open(...)"` instead of form submission
-  - Template variables: `OAUTH_USER_CODE`, `USER_CODE_DISPLAY`, `USER_CODE_HINT`
-  - CGI sets these from `device_code.json` (webfrontend/htmlauth/index.cgi:145-150)
-
-## UI Styling
-
-The web interface includes embedded jQuery UI theme styles for consistent appearance:
-- Button styles (ui-button)
-- State indicators (ui-state-default, ui-state-active, ui-state-highlight, ui-state-error)
-- Widget styles (ui-widget, ui-widget-content, ui-widget-header)
-- Corner rounding (ui-corner-all, ui-corner-top, ui-corner-bottom)
-
-These styles ensure the plugin works even if LoxBerry's jQuery UI CSS is not loaded.
+```perl
+use LoxBerry::System;    # plugindata(), $lbpbindir, $lbpdatadir, etc.
+use LoxBerry::Web;       # readlanguage(), lbheader(), lbfooter(), loglist_html()
+use LoxBerry::Log;       # LOGSTART, LOGINF, LOGOK, LOGWARN, LOGERR, LOGCRIT, LOGDEB, LOGEND
+use LoxBerry::JSON;      # JSON handling
+use LoxBerry::IO;        # mqtt_connectiondetails()
+```
 
 - Before doing any plannings or modifications, always check for changes first. I always change files myself to improve the code.

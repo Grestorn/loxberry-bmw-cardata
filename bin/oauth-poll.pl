@@ -6,6 +6,7 @@ use LWP::UserAgent;
 use JSON;
 use Time::HiRes qw(sleep);
 use File::Basename;
+use Getopt::Long;
 use LoxBerry::Log;
 
 # BMW CarData API Configuration
@@ -16,13 +17,21 @@ use constant {
     VEHICLES_MAPPINGS_ENDPOINT => '/customers/vehicles/mappings',
 };
 
-# Plugin data directory
-my $data_dir = "REPLACELBPDATADIR";
+# Command line options
+my $account_id;
+GetOptions(
+    'account|a=s' => \$account_id,
+) or die "Usage: $0 --account <account_id>\n";
+die "Missing --account parameter\n" unless $account_id;
 
-my $config_file = "$data_dir/config.json";
-my $pkce_file = "$data_dir/pkce.json";
-my $device_file = "$data_dir/device_code.json";
-my $tokens_file = "$data_dir/tokens.json";
+# Plugin data directory (account-scoped)
+my $data_dir = "REPLACELBPDATADIR";
+my $account_dir = "$data_dir/accounts/$account_id";
+
+my $config_file = "$account_dir/config.json";
+my $pkce_file = "$account_dir/pkce.json";
+my $device_file = "$account_dir/device_code.json";
+my $tokens_file = "$account_dir/tokens.json";
 
 # Load configuration
 unless (-f $config_file) {
@@ -40,7 +49,7 @@ my $CLIENT_ID = $config->{client_id};
 
 # Initialize logging
 my $log = LoxBerry::Log->new(
-    name => 'oauth-poll',
+    name => "oauth-poll-$account_id",
     stderr => 1,  # Redirect STDERR to log
     addtime => 1  # Add timestamps to log entries
 );

@@ -28,21 +28,25 @@ use constant {
     TOKEN_REFRESH_MARGIN => 90,           # Refresh when < 90 s left
 };
 
+# Command line options
+my $daemon = 0;
+my $account_id;
+
+GetOptions(
+    'daemon|d' => \$daemon,
+    'account|a=s' => \$account_id,
+) or die "Usage: $0 --account <account_id> [--daemon]\n";
+die "Missing --account parameter\n" unless $account_id;
+
 # Plugin directories
 my $bin_dir = "REPLACELBPBINDIR";
 my $data_dir = "REPLACELBPDATADIR";
 my $log_dir = "REPLACELBPLOGDIR";
-my $tokens_file = "$data_dir/tokens.json";
-my $config_file = "$data_dir/config.json";
+my $account_dir = "$data_dir/accounts/$account_id";
+my $tokens_file = "$account_dir/tokens.json";
+my $config_file = "$account_dir/config.json";
 
 # Note: CLIENT_ID is read from config file and not needed by bridge (only for OAuth operations)
-
-# Command line options
-my $daemon = 0;
-
-GetOptions(
-    'daemon|d' => \$daemon,
-) or die "Usage: $0 [--daemon]\n";
 
 # Global state
 my $running = 1;
@@ -62,7 +66,7 @@ my $messages_since_last_report = 0;  # Messages since last report
 
 # Initialize logging
 my $log = LoxBerry::Log->new(
-    name => 'bmw-cardata-bridge',
+    name => "bridge-$account_id",
     stderr => 1,  # Redirect STDERR to log
     addtime => 1  # Add timestamps to log entries
 );
@@ -650,7 +654,7 @@ sub daemonize {
     setsid() or die "Can't start a new session: $!";
 
     # Write PID file
-    my $pid_file = "$data_dir/bridge.pid";
+    my $pid_file = "$account_dir/bridge.pid";
     open(my $fh, '>', $pid_file) or die "Can't write PID file: $!";
     print $fh $$;
     close($fh);

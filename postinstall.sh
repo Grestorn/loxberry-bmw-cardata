@@ -83,5 +83,10 @@ fi
 
 echo "<INFO> Perl module installation complete."
 
+# Create accounts directory for multi-account support
+echo "<INFO> Creating accounts directory..."
+mkdir -p "$PDATA/accounts"
+echo "<OK> Accounts directory created."
+
 # Exit with Status 0
 exit 0

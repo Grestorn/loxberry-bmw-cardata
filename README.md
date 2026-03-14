@@ -38,6 +38,7 @@ Die Daten werden von BMW in Echtzeit übertragen, sobald sich einer der Werte ä
 - ✅ MQTT Bridge für Echtzeit-Datenübertragung
 - ✅ Benutzerfreundliches Web-Interface für Konfiguration
 - ✅ Unterstützung für mehrere Fahrzeuge
+- ✅ **Multi-Account-Unterstützung** – mehrere BMW-IDs in einer Plugin-Instanz verwalten
 - ✅ Automatischer Start der Bridge nach erfolgreicher Anmeldung
 
 ### Voraussetzungen
@@ -63,6 +64,20 @@ Die Daten werden von BMW in Echtzeit übertragen, sobald sich einer der Werte ä
 Nach der Installation fährst du mit dem folgenden Konfigurationsprozess fort.
 
 ### Konfiguration
+
+#### Schritt 0: Konto erstellen
+
+Das Plugin unterstützt mehrere BMW-Konten (z.B. für verschiedene Familienmitglieder mit eigenen BMW-IDs).
+
+1. Öffne das Plugin im LoxBerry
+2. Klicke auf **"+ Konto hinzufügen"** in der Kontoleiste
+3. Gib einen **Namen** für das Konto ein (z.B. "Martins BMW")
+4. Klicke auf **"Erstellen"**
+5. Das Konto wird automatisch ausgewählt
+
+> **ℹ️ Hinweis:** Du kannst jederzeit weitere Konten hinzufügen. Jedes Konto hat seine eigene Konfiguration, Anmeldung und Bridge. Zwischen den Konten wechselst du über die Kontoleiste am oberen Rand der Plugin-Seite.
+
+Die folgenden Schritte müssen **pro Konto** durchgeführt werden.
 
 #### Schritt 1: BMW CarData Portal öffnen
 
@@ -119,7 +134,7 @@ Nach der Installation fährst du mit dem folgenden Konfigurationsprozess fort.
    - **MQTT Stream Host** (Standard: `customer.streaming-cardata.bmwgroup.com`)
    - **MQTT Stream Port** (Standard: `9000`)
    - **MQTT Stream Benutzername** (aus Schritt 3)
-   - **MQTT Topic-Präfix für LoxBerry** (Standard: `bmw`)
+   - **MQTT Topic-Präfix für LoxBerry** (Standard: `bmw-<kontoname>`)
 
 > **ℹ️ Hinweis:** Das Feld **"Fahrzeug-Identifikationsnummern (VINs)"** kann leer bleiben - es wird automatisch bei der Anmeldung ausgefüllt.
 
@@ -170,7 +185,7 @@ Nach erfolgreicher Anmeldung wird die MQTT Bridge automatisch gestartet. Der Sta
 **Automatische Funktionen:**
 - ✅ Token-Verwaltung: Tokens werden alle 10 Minuten automatisch erneuert
 - ✅ Anmeldung automatisch verlängert: Solange das Plugin läuft, bleibt die Anmeldung gültig (bis zu 2 Wochen)
-- ✅ Bridge-Start beim Systemstart: Die Bridge startet automatisch nach einem Neustart
+- ✅ Bridge-Start beim Systemstart: Alle Bridges starten automatisch nach einem Neustart
 
 ### MQTT Topics in Loxone verwenden
 
@@ -181,13 +196,13 @@ Die Fahrzeugdaten werden über MQTT Topics im folgenden Format bereitgestellt:
 <prefix>/<VIN>/<attribut>
 ```
 
-**Beispiel-Topics:**
+**Beispiel-Topics** (bei Konto "martin" mit Standard-Präfix `bmw-martin`):
 ```
-bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.charging.acousticLimit/timestamp
-bmw/WBA12345678901234/data/vehicle.body.chargingPort.status/value
-bmw/WBA12345678901234/data/vehicle.body.doors.frontLeft.lockState/value
-bmw/WBA12345678901234/data/vehicle.location.coordinates.latitude/value
-bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.percent/value
+bmw-martin/WBA12345678901234/data/vehicle.powertrain.electric.battery.charging.acousticLimit/timestamp
+bmw-martin/WBA12345678901234/data/vehicle.body.chargingPort.status/value
+bmw-martin/WBA12345678901234/data/vehicle.body.doors.frontLeft.lockState/value
+bmw-martin/WBA12345678901234/data/vehicle.location.coordinates.latitude/value
+bmw-martin/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.percent/value
 ```
 
 > **⚠️ Wichtiger Hinweis:** BMW sendet **keine Daten**, solange das Fahrzeug steht und keine Veränderungen stattfinden. Um den Datenfluss zu testen, kannst du z.B. das Auto öffnen (sofern der Türschloss-Status bei den zu übertragenden Daten ausgewählt wurde).
@@ -204,7 +219,7 @@ bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.perce
 
 1. Öffne **LoxBerry MQTT Gateway** (anderes Plugin)
 2. Wechsle zum Tab **"MQTT Finder"**
-3. Suche nach dem Topic **`bmw/<VIN>`** (z.B. `bmw/WBA12345678901234`)
+3. Suche nach dem Topic mit deinem Konto-Präfix (z.B. `bmw-martin/WBA12345678901234`)
 4. Hier sollten alle empfangenen Topics des Fahrzeugs aufgelistet sein
 
 #### Schritt 3: Gateway Subscription einrichten
@@ -212,9 +227,9 @@ bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.perce
 1. Im **LoxBerry MQTT Gateway** zum Tab **"MQTT Gateway"** wechseln
 2. Abschnitt **"Gateway Subscription"** öffnen
 3. Neue Subscription hinzufügen:
-   - **Alle BMW-Daten übertragen:** `bmw/#`
-   - **Nur ein bestimmtes Fahrzeug:** `bmw/WBA12345678901234/#`
-   - **Nur bestimmte Attribute:** `bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery/#`
+   - **Alle BMW-Daten eines Kontos:** `bmw-martin/#`
+   - **Nur ein bestimmtes Fahrzeug:** `bmw-martin/WBA12345678901234/#`
+   - **Nur bestimmte Attribute:** `bmw-martin/WBA12345678901234/data/vehicle.powertrain.electric.battery/#`
 
 4. **Optional:** Traffic reduzieren mit Filter-Expression
    - Im Feld **"Subscription Filter Expression (RegEx)"** eintragen: `^(?!.*_value$).+`
@@ -258,7 +273,10 @@ Für die Einrichtung in Loxone Config (Virtual Inputs anlegen, Topics abonnieren
 A: Die Anmeldung wird automatisch alle 10 Minuten erneuert und bleibt gültig, solange das Plugin läuft. Die maximale Gültigkeit ohne Erneuerung beträgt 2 Wochen.
 
 **F: Muss ich für jedes Fahrzeug eine eigene Konfiguration erstellen?**
-A: Nein! Der CarData Stream enthält automatisch Daten von ALLEN Fahrzeugen, die deinem BMW-Account zugeordnet sind.
+A: Nein! Der CarData Stream enthält automatisch Daten von ALLEN Fahrzeugen, die deinem BMW-Account zugeordnet sind. Du brauchst nur ein Konto pro BMW-ID.
+
+**F: Kann ich mehrere BMW-IDs verwenden?**
+A: Ja! Das Plugin unterstützt mehrere Konten. Erstelle für jede BMW-ID ein eigenes Konto über "Konto hinzufügen". Jedes Konto hat seine eigene Bridge und eigene MQTT-Topics.
 
 **F: Welche Daten sollte ich im BMW Portal auswählen?**
 A: Wähle nur die Daten aus, die du wirklich benötigst. Weniger Daten = weniger Last auf Netzwerk und LoxBerry.
@@ -267,7 +285,10 @@ A: Wähle nur die Daten aus, die du wirklich benötigst. Weniger Daten = weniger
 A: Nein, BMW CarData ist für BMW-Kunden kostenlos verfügbar.
 
 **F: Was passiert bei einem LoxBerry-Neustart?**
-A: Die Bridge startet automatisch beim Systemstart. Tokens werden vom Cron-Job alle 10 Minuten aktualisiert.
+A: Alle Bridges starten automatisch beim Systemstart. Tokens werden für alle Konten vom Cron-Job alle 10 Minuten aktualisiert.
+
+**F: Ich hatte vorher Version 1.x mit Einzelkonto. Was passiert beim Update?**
+A: Beim Update auf Version 2.x wird das bestehende Konto automatisch als Konto "default" migriert. Konfiguration, Tokens und Bridge bleiben erhalten.
 
 ---
 
@@ -302,6 +323,7 @@ Data is transmitted by BMW in real-time as soon as any value changes. This ensur
 - ✅ MQTT bridge for real-time data transmission
 - ✅ User-friendly web interface for configuration
 - ✅ Support for multiple vehicles
+- ✅ **Multi-account support** – manage multiple BMW IDs in a single plugin instance
 - ✅ Automatic bridge start after successful authentication
 
 ### Requirements
@@ -327,6 +349,20 @@ Data is transmitted by BMW in real-time as soon as any value changes. This ensur
 After installation, proceed with the configuration process below.
 
 ### Configuration
+
+#### Step 0: Create Account
+
+The plugin supports multiple BMW accounts (e.g., for different family members with their own BMW IDs).
+
+1. Open the plugin in LoxBerry
+2. Click **"+ Add Account"** in the account bar
+3. Enter a **name** for the account (e.g., "Martin's BMW")
+4. Click **"Create"**
+5. The account will be automatically selected
+
+> **ℹ️ Note:** You can add more accounts at any time. Each account has its own configuration, authentication, and bridge. Switch between accounts using the account bar at the top of the plugin page.
+
+The following steps must be performed **for each account**.
 
 #### Step 1: Open BMW CarData Portal
 
@@ -383,7 +419,7 @@ After installation, proceed with the configuration process below.
    - **MQTT Stream Host** (default: `customer.streaming-cardata.bmwgroup.com`)
    - **MQTT Stream Port** (default: `9000`)
    - **MQTT Stream Username** (from step 3)
-   - **MQTT Topic Prefix for LoxBerry** (default: `bmw`)
+   - **MQTT Topic Prefix for LoxBerry** (default: `bmw-<accountname>`)
 
 > **ℹ️ Note:** The **"Vehicle Identification Numbers (VINs)"** field can be left empty - it will be filled automatically during registration.
 
@@ -434,7 +470,7 @@ After successful authentication, the MQTT bridge starts automatically. The statu
 **Automatic Functions:**
 - ✅ Token Management: Tokens are automatically renewed every 10 minutes
 - ✅ Authentication Automatically Extended: As long as the plugin is running, authentication remains valid (up to 2 weeks)
-- ✅ Bridge Auto-start: Bridge starts automatically after system reboot
+- ✅ Bridge Auto-start: All bridges start automatically after system reboot
 
 ### Using MQTT Topics in Loxone
 
@@ -445,13 +481,13 @@ Vehicle data is provided via MQTT topics in the following format:
 <prefix>/<VIN>/<attribute>
 ```
 
-**Example Topics:**
+**Example Topics** (for account "martin" with default prefix `bmw-martin`):
 ```
-bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.charging.acousticLimit/timestamp
-bmw/WBA12345678901234/data/vehicle.body.chargingPort.status/value
-bmw/WBA12345678901234/data/vehicle.body.doors.frontLeft.lockState/value
-bmw/WBA12345678901234/data/vehicle.location.coordinates.latitude/value
-bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.percent/value
+bmw-martin/WBA12345678901234/data/vehicle.powertrain.electric.battery.charging.acousticLimit/timestamp
+bmw-martin/WBA12345678901234/data/vehicle.body.chargingPort.status/value
+bmw-martin/WBA12345678901234/data/vehicle.body.doors.frontLeft.lockState/value
+bmw-martin/WBA12345678901234/data/vehicle.location.coordinates.latitude/value
+bmw-martin/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.percent/value
 ```
 
 > **⚠️ Important Note:** BMW does **not send data** while the vehicle is stationary and no changes occur. To test the data flow, you can e.g. unlock the car (if door lock status was selected in the data to be transmitted).
@@ -468,7 +504,7 @@ bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.perce
 
 1. Open **LoxBerry MQTT Gateway** (separate plugin)
 2. Switch to the **"MQTT Finder"** tab
-3. Search for the topic **`bmw/<VIN>`** (e.g., `bmw/WBA12345678901234`)
+3. Search for the topic with your account prefix (e.g., `bmw-martin/WBA12345678901234`)
 4. All received topics for the vehicle should be listed here
 
 #### Step 3: Set Up Gateway Subscription
@@ -476,9 +512,9 @@ bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery.chargeLevel.perce
 1. In **LoxBerry MQTT Gateway**, switch to the **"MQTT Gateway"** tab
 2. Open the **"Gateway Subscription"** section
 3. Add new subscription:
-   - **Transfer all BMW data:** `bmw/#`
-   - **Only a specific vehicle:** `bmw/WBA12345678901234/#`
-   - **Only specific attributes:** `bmw/WBA12345678901234/data/vehicle.powertrain.electric.battery/#`
+   - **Transfer all BMW data for an account:** `bmw-martin/#`
+   - **Only a specific vehicle:** `bmw-martin/WBA12345678901234/#`
+   - **Only specific attributes:** `bmw-martin/WBA12345678901234/data/vehicle.powertrain.electric.battery/#`
 
 4. **Optional:** Reduce traffic with filter expression
    - In the **"Subscription Filter Expression (RegEx)"** field, enter: `^(?!.*_value$).+`
@@ -522,7 +558,10 @@ For setting up in Loxone Config (creating Virtual Inputs, subscribing to topics,
 A: Authentication is automatically renewed every 10 minutes and remains valid as long as the plugin is running. Maximum validity without renewal is 2 weeks.
 
 **Q: Do I need to create a separate configuration for each vehicle?**
-A: No! The CarData Stream automatically includes data from ALL vehicles assigned to your BMW account.
+A: No! The CarData Stream automatically includes data from ALL vehicles assigned to your BMW account. You only need one account per BMW ID.
+
+**Q: Can I use multiple BMW IDs?**
+A: Yes! The plugin supports multiple accounts. Create a separate account for each BMW ID via "Add Account". Each account has its own bridge and MQTT topics.
 
 **Q: Which data should I select in the BMW portal?**
 A: Select only the data you actually need. Less data = less load on network and LoxBerry.
@@ -531,7 +570,10 @@ A: Select only the data you actually need. Less data = less load on network and 
 A: No, BMW CarData is available free of charge for BMW customers.
 
 **Q: What happens after a LoxBerry reboot?**
-A: The bridge starts automatically at system startup. Tokens are updated by the cron job every 10 minutes.
+A: All bridges start automatically at system startup. Tokens are updated for all accounts by the cron job every 10 minutes.
+
+**Q: I had version 1.x with a single account. What happens on upgrade?**
+A: When upgrading to version 2.x, the existing account is automatically migrated as account "default". Configuration, tokens, and bridge are preserved.
 
 ---
 
@@ -541,13 +583,15 @@ This section provides a high-level overview of the plugin's technical architectu
 
 ### Architecture Overview
 
+The plugin supports multiple BMW accounts (multi-tenant). Each account is stored in its own subdirectory under `data/accounts/{account-id}/` with separate configuration, tokens, and bridge process.
+
 The plugin consists of several components:
 
-- **Web Interface** (`webfrontend/htmlauth/index.cgi`): Perl CGI script providing configuration UI and OAuth flow management
-- **OAuth Scripts** (`bin/oauth-init.pl`, `bin/oauth-poll.pl`): Handle BMW OAuth 2.0 Device Code Flow (RFC 8628)
-- **Token Manager** (`bin/token-manager.pl`): Manages automatic token refresh (runs via cron every 10 minutes)
-- **MQTT Bridge** (`bin/bmw-cardata-bridge.pl`): Daemon process that connects to BMW CarData MQTT stream and forwards messages to LoxBerry MQTT Gateway
-- **Bridge Control** (`bin/bridge-control.sh`): System script for starting/stopping/restarting the bridge daemon
+- **Web Interface** (`webfrontend/htmlauth/index.cgi`): Perl CGI script providing account management, configuration UI, and OAuth flow management
+- **OAuth Scripts** (`bin/oauth-init.pl`, `bin/oauth-poll.pl`): Handle BMW OAuth 2.0 Device Code Flow (RFC 8628). Require `--account <id>` parameter
+- **Token Manager** (`bin/token-manager.pl`): Manages automatic token refresh (runs via cron every 10 minutes for all accounts). Requires `--account <id>` parameter
+- **MQTT Bridge** (`bin/bmw-cardata-bridge.pl`): Daemon process (one per account) that connects to BMW CarData MQTT stream and forwards messages to LoxBerry MQTT Gateway. Requires `--account <id>` parameter
+- **Bridge Control** (`bin/bridge-control.sh`): System script for starting/stopping/restarting bridge daemons. Supports `--account <id>` for per-account control and `start-all`/`stop-all` for all accounts
 
 ### OAuth 2.0 Authentication Flow
 
@@ -577,21 +621,24 @@ The bridge uses two MQTT connections:
    - Publishes to local LoxBerry MQTT broker
    - Topic transformation: `<GCID>/<VIN>/...` → `<prefix>/<VIN>/...` (username removed)
 
-**Auto-Reconnect**: The bridge monitors `tokens.json` every 5 minutes and automatically reconnects when new tokens are detected (after cron job refresh).
+**Auto-Reconnect**: The bridge monitors `tokens.json` every 2.5 minutes and automatically reconnects when new tokens are detected (after cron job refresh).
 
 ### Data Persistence
 
-- **`data/config.json`**: Plugin configuration (Client ID, Stream Host, VINs, MQTT prefix)
-- **`data/tokens.json`**: OAuth tokens and expiry timestamps
-- **`data/device_code.json`**: Temporary file during OAuth flow (deleted after successful authentication)
-- **`data/pkce.json`**: Temporary PKCE verifier during OAuth flow (deleted after successful authentication)
-- **`data/bridge.pid`**: PID file for bridge daemon process
+Each account stores its data in `data/accounts/{account-id}/`:
+
+- **`config.json`**: Account configuration (account name, Client ID, Stream Host, VINs, MQTT prefix)
+- **`tokens.json`**: OAuth tokens and expiry timestamps
+- **`device_code.json`**: Temporary file during OAuth flow (deleted after successful authentication)
+- **`pkce.json`**: Temporary PKCE verifier during OAuth flow (deleted after successful authentication)
+- **`bridge.pid`**: PID file for bridge daemon process
 
 ### Automatic Functions
 
-- **Token Refresh**: Cron job (`cron/cron.10min`) runs token-manager every 10 minutes to refresh tokens 15 minutes before expiry
-- **Bridge Auto-start**: Boot script (`cron/cron.reboot`) starts bridge daemon on system startup
-- **Graceful Shutdown**: Bridge handles SIGTERM/SIGINT for clean shutdown during plugin updates
+- **Token Refresh**: Cron job (`cron/cron.10min`) loops over all accounts and runs token-manager every 10 minutes to refresh tokens 15 minutes before expiry
+- **Bridge Auto-start**: Boot script (`cron/cron.reboot`) starts bridge daemons for all configured accounts on system startup
+- **Graceful Shutdown**: Bridges handle SIGTERM/SIGINT for clean shutdown during plugin updates
+- **Migration**: `postupgrade.sh` automatically migrates single-account (v1.x) data to the multi-account layout (`data/accounts/default/`)
 
 ### Technology Stack
 
@@ -603,7 +650,7 @@ The bridge uses two MQTT connections:
 
 ### Security Considerations
 
-- OAuth tokens stored in `data/` directory (protected by LoxBerry file permissions)
+- OAuth tokens stored in `data/accounts/` directory (protected by LoxBerry file permissions)
 - PKCE (Proof Key for Code Exchange) used for OAuth flow to prevent authorization code interception
 - MQTT connection to BMW uses TLS encryption
 - No credentials stored in plugin code or configuration

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # BMW CarData Plugin - 10 Minute Cron Job
-# This script runs every 10 minutes to refresh OAuth tokens
+# This script runs every 10 minutes to refresh OAuth tokens for all accounts
 #
 # Documentation:
 # https://wiki.loxberry.de/plugins/plugins_cron_and_daemons
@@ -9,12 +9,18 @@
 PLUGINNAME=REPLACELBPPLUGINDIR
 LBHOMEDIR=/opt/loxberry
 LBPBINDIR=$LBHOMEDIR/bin/plugins/$PLUGINNAME
+LBPDATADIR=$LBHOMEDIR/data/plugins/$PLUGINNAME
 LBPLOGDIR=$LBHOMEDIR/log/plugins/$PLUGINNAME
 
 # Ensure log directory exists
 mkdir -p "$LBPLOGDIR"
 
-# Run token refresh check
-"$LBPBINDIR/token-manager.pl" check >> "$LBPLOGDIR/token-refresh.log" 2>&1
+# Run token refresh check for each account
+for ACCOUNT_DIR in "$LBPDATADIR"/accounts/*/; do
+    if [ -d "$ACCOUNT_DIR" ] && [ -f "$ACCOUNT_DIR/tokens.json" ]; then
+        ACCOUNT_ID=$(basename "$ACCOUNT_DIR")
+        "$LBPBINDIR/token-manager.pl" --account "$ACCOUNT_ID" check >> "$LBPLOGDIR/token-refresh.log" 2>&1
+    fi
+done
 
 exit 0

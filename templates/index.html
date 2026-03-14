@@ -19,6 +19,74 @@
     .ui-button:active { border-color: #003eff; background: #007fff; color: #ffffff; }
 </style>
 
+<!-- Account Selector Bar -->
+<div class="ui-widget" style="margin-bottom: 20px;">
+    <div class="ui-widget-header ui-corner-top" style="padding: 10px;">
+        <strong><TMPL_VAR ACCOUNTS.TITLE></strong>
+    </div>
+    <div class="ui-widget-content ui-corner-bottom" style="padding: 10px;">
+        <TMPL_LOOP ACCOUNTS_LOOP>
+            <a href="index.cgi?account=<TMPL_VAR ACCOUNT_ID>"
+               class="ui-button ui-widget ui-corner-all <TMPL_IF ACCOUNT_ACTIVE>ui-state-active</TMPL_IF>"
+               style="margin-right: 5px; margin-bottom: 5px;">
+                <TMPL_VAR ACCOUNT_NAME>
+            </a>
+        </TMPL_LOOP>
+
+        <!-- Add Account Button -->
+        <button type="button" class="ui-button ui-widget ui-corner-all" style="margin-bottom: 5px;"
+                onclick="document.getElementById('create-account-form').style.display = document.getElementById('create-account-form').style.display === 'none' ? 'block' : 'none';">
+            + <TMPL_VAR ACCOUNTS.ADD_BUTTON>
+        </button>
+
+        <!-- Create Account Form (hidden by default) -->
+        <div id="create-account-form" style="display: none; margin-top: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">
+            <form method="post" action="index.cgi" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <input type="hidden" name="action" value="create_account">
+                <label for="account_name"><strong><TMPL_VAR ACCOUNTS.NAME_LABEL>:</strong></label>
+                <input type="text" id="account_name" name="account_name" placeholder="z.B. Martin's BMW" style="flex: 1; min-width: 200px; max-width: 300px;" required>
+                <button type="submit" class="ui-button ui-widget ui-corner-all">
+                    <TMPL_VAR ACCOUNTS.CREATE_BUTTON>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Account Status Messages -->
+<TMPL_IF ACCOUNT_CREATED>
+<div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span style="font-size: 1.2em; margin-right: 8px;">✅</span>
+    <strong><TMPL_VAR ACCOUNTS.CREATED></strong>: <TMPL_VAR ACCOUNT_CREATED_NAME>
+</div>
+</TMPL_IF>
+
+<TMPL_IF ACCOUNT_DELETED>
+<div class="ui-state-highlight ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span style="font-size: 1.2em; margin-right: 8px;">ℹ️</span>
+    <strong><TMPL_VAR ACCOUNTS.DELETED></strong>
+</div>
+</TMPL_IF>
+
+<TMPL_IF ACCOUNT_CREATE_ERROR>
+<div class="ui-state-error ui-corner-all" style="padding: 10px; margin-bottom: 20px;">
+    <span style="font-size: 1.2em; margin-right: 8px;">❌</span>
+    <strong><TMPL_VAR ACCOUNTS.CREATE_ERROR></strong>
+</div>
+</TMPL_IF>
+
+<!-- No Accounts State -->
+<TMPL_IF NO_ACCOUNTS>
+<div class="ui-widget" style="margin-bottom: 20px;">
+    <div class="ui-widget-content ui-corner-all" style="padding: 30px; text-align: center;">
+        <p style="font-size: 1.1em; color: #666;"><TMPL_VAR ACCOUNTS.NO_ACCOUNTS></p>
+        <script>document.getElementById('create-account-form').style.display = 'block';</script>
+    </div>
+</div>
+</TMPL_IF>
+
+<!-- Main content (only if an account is selected) -->
+<TMPL_IF HAS_ACCOUNTS>
 <TMPL_IF PAGE_MAIN>
 
 <!-- Status Messages -->
@@ -122,6 +190,7 @@
 
             <form method="post" action="index.cgi" style="margin-top: 10px; display: inline-block; margin-right: 10px;">
                 <input type="hidden" name="action" value="refresh_token">
+                <input type="hidden" name="account" value="<TMPL_VAR CURRENT_ACCOUNT_ID>">
                 <button type="submit" class="ui-button ui-widget ui-corner-all">
                     <TMPL_VAR STATUS.REFRESH_TOKEN_BUTTON>
                 </button>
@@ -129,6 +198,7 @@
 
             <form method="post" action="index.cgi" style="margin-top: 10px; display: inline-block;">
                 <input type="hidden" name="action" value="reset_auth">
+                <input type="hidden" name="account" value="<TMPL_VAR CURRENT_ACCOUNT_ID>">
                 <button type="submit" class="ui-button ui-widget ui-corner-all">
                     <TMPL_VAR OAUTH.RESTART_AUTH_BUTTON>
                 </button>
@@ -151,6 +221,7 @@
 
                 <form method="post" action="index.cgi" style="margin-top: 10px; display: inline-block; margin-right: 10px;">
                     <input type="hidden" name="action" value="refresh_token">
+                    <input type="hidden" name="account" value="<TMPL_VAR CURRENT_ACCOUNT_ID>">
                     <button type="submit" class="ui-button ui-widget ui-corner-all">
                         <TMPL_VAR STATUS.REFRESH_TOKEN_BUTTON>
                     </button>
@@ -158,6 +229,7 @@
 
                 <form method="post" action="index.cgi" style="margin-top: 10px; display: inline-block;">
                     <input type="hidden" name="action" value="reset_auth">
+                    <input type="hidden" name="account" value="<TMPL_VAR CURRENT_ACCOUNT_ID>">
                     <button type="submit" class="ui-button ui-widget ui-corner-all">
                         <TMPL_VAR OAUTH.RESTART_AUTH_BUTTON>
                     </button>
@@ -217,6 +289,7 @@
                 <strong>3.</strong> <TMPL_VAR OAUTH.STEP3>
                 <form method="post" action="index.cgi" style="margin-top: 10px; margin-left: 28px;">
                     <input type="hidden" name="action" value="request_device_code">
+                    <input type="hidden" name="account" value="<TMPL_VAR CURRENT_ACCOUNT_ID>">
                     <button type="submit" class="ui-button ui-widget ui-corner-all" <TMPL_UNLESS CONFIG_HAS_CLIENT_ID>disabled</TMPL_UNLESS>>
                         <TMPL_VAR OAUTH.REQUEST_DEVICE_CODE_BUTTON>
                     </button>
@@ -267,6 +340,7 @@
                 <strong>5.</strong> <TMPL_VAR OAUTH.STEP5>
                 <form method="post" action="index.cgi" style="margin-top: 10px; margin-left: 28px;">
                     <input type="hidden" name="action" value="check_oauth">
+                    <input type="hidden" name="account" value="<TMPL_VAR CURRENT_ACCOUNT_ID>">
                     <button type="submit" class="ui-button ui-widget ui-corner-all" <TMPL_UNLESS OAUTH_VERIFICATION_URI>disabled</TMPL_UNLESS>>
                         <TMPL_VAR OAUTH.POLL_BUTTON>
                     </button>
@@ -287,6 +361,7 @@
         <p><TMPL_VAR OAUTH.REAUTH_MESSAGE></p>
         <form method="post" action="index.cgi">
             <input type="hidden" name="action" value="start_oauth">
+            <input type="hidden" name="account" value="<TMPL_VAR CURRENT_ACCOUNT_ID>">
             <button type="submit" class="ui-button ui-widget ui-corner-all">
                 <TMPL_VAR OAUTH.START_BUTTON>
             </button>
@@ -313,12 +388,14 @@
             <TMPL_IF BRIDGE_RUNNING>
                 <form method="post" action="index.cgi" style="display: inline;">
                     <input type="hidden" name="action" value="stop_bridge">
+                    <input type="hidden" name="account" value="<TMPL_VAR CURRENT_ACCOUNT_ID>">
                     <button type="submit" class="ui-button ui-widget ui-corner-all">
                         <TMPL_VAR BRIDGE.STOP_BUTTON>
                     </button>
                 </form>
                 <form method="post" action="index.cgi" style="display: inline;">
                     <input type="hidden" name="action" value="restart_bridge">
+                    <input type="hidden" name="account" value="<TMPL_VAR CURRENT_ACCOUNT_ID>">
                     <button type="submit" class="ui-button ui-widget ui-corner-all">
                         <TMPL_VAR BRIDGE.RESTART_BUTTON>
                     </button>
@@ -326,6 +403,7 @@
             <TMPL_ELSE>
                 <form method="post" action="index.cgi" style="display: inline;">
                     <input type="hidden" name="action" value="start_bridge">
+                    <input type="hidden" name="account" value="<TMPL_VAR CURRENT_ACCOUNT_ID>">
                     <button type="submit" class="ui-button ui-widget ui-corner-all">
                         <TMPL_VAR BRIDGE.START_BUTTON>
                     </button>
@@ -341,6 +419,7 @@
 <h2><TMPL_VAR CONFIG.TITLE></h2>
 <form method="post" action="index.cgi">
     <input type="hidden" name="action" value="save_config">
+    <input type="hidden" name="account" value="<TMPL_VAR CURRENT_ACCOUNT_ID>">
 
     <div class="ui-widget" style="margin-bottom: 20px;">
         <div class="ui-widget-content ui-corner-all" style="padding: 15px;">
@@ -393,6 +472,23 @@
     </div>
 </form>
 
+<!-- Delete Account -->
+<h2><TMPL_VAR ACCOUNTS.DELETE_TITLE></h2>
+<div class="ui-widget" style="margin-bottom: 20px;">
+    <div class="ui-widget-content ui-corner-all" style="padding: 15px;">
+        <p style="color: #666;"><TMPL_VAR ACCOUNTS.DELETE_INFO></p>
+        <form method="post" action="index.cgi" style="margin-top: 10px;"
+              onsubmit="return confirm('<TMPL_VAR ACCOUNTS.CONFIRM_DELETE>');">
+            <input type="hidden" name="action" value="delete_account">
+            <input type="hidden" name="account" value="<TMPL_VAR CURRENT_ACCOUNT_ID>">
+            <button type="submit" class="ui-button ui-widget ui-corner-all" style="color: #cc0000;">
+                <TMPL_VAR ACCOUNTS.DELETE_BUTTON>
+            </button>
+        </form>
+    </div>
+</div>
+
+</TMPL_IF>
 </TMPL_IF>
 
 <!-- Bridge Logs Page -->

@@ -20,7 +20,8 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:loxberry.home)",
       "Bash(bash:*)",
-      "Bash(tar:*)"
+      "Bash(tar:*)",
+      "Bash(find /d/Development/git/loxberry-bmw-cardata -type f \\\\\\( -name \"*.pl\" -o -name \"*.sh\" \\\\\\) | xargs grep -l \"config.json\\\\|tokens.json\\\\|bridge.pid\" 2>/dev/null)"
     ],
     "deny": [],
     "ask": []

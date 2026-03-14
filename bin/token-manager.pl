@@ -15,10 +15,23 @@ use constant {
     REFRESH_MARGIN => 900,  # Refresh tokens 15 minutes before expiry
 };
 
-# Plugin data directory
+# Command line options
+my $account_id;
+my $force = 0;
+
+GetOptions(
+    'account|a=s' => \$account_id,
+    'force|f' => \$force,
+) or die "Usage: $0 --account <account_id> [check|refresh|status] [--force]\n";
+die "Missing --account parameter\n" unless $account_id;
+
+my $command = $ARGV[0] || 'check';
+
+# Plugin data directory (account-scoped)
 my $data_dir = "REPLACELBPDATADIR";
-my $config_file = "$data_dir/config.json";
-my $tokens_file = "$data_dir/tokens.json";
+my $account_dir = "$data_dir/accounts/$account_id";
+my $config_file = "$account_dir/config.json";
+my $tokens_file = "$account_dir/tokens.json";
 
 # Load configuration
 my $CLIENT_ID;
@@ -27,17 +40,9 @@ if (-f $config_file) {
     $CLIENT_ID = $config->{client_id} if $config && $config->{client_id};
 }
 
-# Command line options
-my $command = $ARGV[0] || 'check';
-my $force = 0;
-
-GetOptions(
-    'force|f' => \$force,
-) or die "Usage: $0 [check|refresh|status] [--force]\n";
-
 # Initialize logging
 my $log = LoxBerry::Log->new(
-    name => 'token-manager',
+    name => "token-manager-$account_id",
     stderr => 1,  # Redirect STDERR to log
     addtime => 1  # Add timestamps to log entries
 );

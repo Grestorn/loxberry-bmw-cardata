@@ -27,6 +27,17 @@
 
     <h2>Quick Start</h2>
 
+    <p><strong>0. Create Account</strong></p>
+    <ul>
+        <li>Click <strong>"+ Add Account"</strong> in the account bar</li>
+        <li>Enter a name (e.g., "Martin's BMW")</li>
+        <li>Click <strong>"Create"</strong></li>
+    </ul>
+
+    <div class="info">
+        ℹ️ The plugin supports multiple BMW accounts. Each account has its own configuration, authentication, and bridge. Repeat the following steps for each account.
+    </div>
+
     <p><strong>1. Create BMW CarData Client</strong></p>
     <ul>
         <li>Open <a href="https://www.bmw.de/de-de/mybmw/vehicle-overview" target="_blank">MyBMW Vehicle Overview</a></li>
@@ -76,8 +87,9 @@
 
     <h2>MQTT Topics</h2>
     <p>Format: <code>&lt;prefix&gt;/&lt;VIN&gt;/&lt;attribute&gt;</code></p>
+    <p>Default prefix: <code>bmw-&lt;accountname&gt;</code></p>
     <p>Example:<br>
-    <code>bmw/WBA1234.../data/vehicle.powertrain.electric.battery.chargeLevel.percent/value</code></p>
+    <code>bmw-martin/WBA1234.../data/vehicle.powertrain.electric.battery.chargeLevel.percent/value</code></p>
 
     <div class="warning">
         ⚠️ BMW only sends data when changes occur. Unlock car to test.
@@ -86,7 +98,7 @@
     <h2>Loxone Integration</h2>
     <ul>
         <li>Open LoxBerry MQTT Gateway</li>
-        <li>Add subscription: <code>bmw/#</code></li>
+        <li>Add subscription: <code>bmw-martin/#</code> (replace with your account prefix)</li>
         <li>Guide: <a href="https://wiki.loxberry.de/konfiguration/widget_help/widget_mqtt/mqtt_gateway/mqtt_schritt_fur_schritt_mqtt_loxone" target="_blank">MQTT Step by Step</a></li>
     </ul>
 
@@ -118,7 +130,10 @@
     Max. 2 weeks, auto-renewed every 10 min.</p>
 
     <p><strong>Separate config per vehicle?</strong><br>
-    No! Stream automatically includes all vehicles.</p>
+    No! Stream automatically includes all vehicles per BMW ID.</p>
+
+    <p><strong>Multiple BMW IDs?</strong><br>
+    Yes! Create one account per BMW ID via "Add Account".</p>
 
     <p><strong>What happens on LoxBerry reboot?</strong><br>
     Bridge starts automatically at system startup.</p>

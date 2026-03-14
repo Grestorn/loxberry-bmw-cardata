@@ -1,4 +1,4 @@
-Wichtig<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -26,6 +26,17 @@ Wichtig<!DOCTYPE html>
     </div>
 
     <h2>Schnellstart</h2>
+
+    <p><strong>0. Konto erstellen</strong></p>
+    <ul>
+        <li>Klicke auf <strong>"+ Konto hinzufügen"</strong> in der Kontoleiste</li>
+        <li>Gib einen Namen ein (z.B. "Martins BMW")</li>
+        <li>Klicke auf <strong>"Erstellen"</strong></li>
+    </ul>
+
+    <div class="info">
+        ℹ️ Das Plugin unterstützt mehrere BMW-Konten. Jedes Konto hat eine eigene Konfiguration, Anmeldung und Bridge. Wiederhole die folgenden Schritte für jedes Konto.
+    </div>
 
     <p><strong>1. BMW CarData Client erstellen</strong></p>
     <ul>
@@ -76,8 +87,9 @@ Wichtig<!DOCTYPE html>
 
     <h2>MQTT Topics</h2>
     <p>Format: <code>&lt;prefix&gt;/&lt;VIN&gt;/&lt;attribut&gt;</code></p>
+    <p>Standard-Präfix: <code>bmw-&lt;kontoname&gt;</code></p>
     <p>Beispiel:<br>
-    <code>bmw/WBA1234.../data/vehicle.powertrain.electric.battery.chargeLevel.percent/value</code></p>
+    <code>bmw-martin/WBA1234.../data/vehicle.powertrain.electric.battery.chargeLevel.percent/value</code></p>
 
     <div class="warning">
         ⚠️ BMW sendet nur bei Änderungen Daten. Zum Testen Fahrzeug öffnen.
@@ -86,7 +98,7 @@ Wichtig<!DOCTYPE html>
     <h2>Loxone Integration</h2>
     <ul>
         <li>LoxBerry MQTT Gateway öffnen</li>
-        <li>Subscription hinzufügen: <code>bmw/#</code></li>
+        <li>Subscription hinzufügen: <code>bmw-martin/#</code> (durch eigenen Konto-Präfix ersetzen)</li>
         <li>Anleitung: <a href="https://wiki.loxberry.de/konfiguration/widget_help/widget_mqtt/mqtt_gateway/mqtt_schritt_fur_schritt_mqtt_loxone" target="_blank">MQTT Schritt für Schritt</a></li>
     </ul>
 
@@ -118,7 +130,10 @@ Wichtig<!DOCTYPE html>
     Max. 2 Wochen, automatische Erneuerung alle 10 Min.</p>
 
     <p><strong>Separate Konfiguration pro Fahrzeug?</strong><br>
-    Nein! Stream enthält automatisch alle Fahrzeuge.</p>
+    Nein! Stream enthält automatisch alle Fahrzeuge pro BMW-ID.</p>
+
+    <p><strong>Mehrere BMW-IDs?</strong><br>
+    Ja! Erstelle pro BMW-ID ein eigenes Konto über "Konto hinzufügen".</p>
 
     <p><strong>Was passiert bei LoxBerry-Neustart?</strong><br>
     Bridge startet automatisch beim Systemstart.</p>

@@ -8,6 +8,7 @@ use MIME::Base64 qw(encode_base64url);
 use Digest::SHA qw(sha256);
 use File::Path qw(make_path);
 use File::Basename;
+use Getopt::Long;
 use LoxBerry::Log;
 
 # BMW CarData API Configuration
@@ -18,13 +19,21 @@ use constant {
     SCOPES => 'authenticate_user openid cardata:api:read cardata:streaming:read',
 };
 
-# Plugin data directory
-my $data_dir = "REPLACELBPDATADIR";
-my $config_file = "$data_dir/config.json";
+# Command line options
+my $account_id;
+GetOptions(
+    'account|a=s' => \$account_id,
+) or die "Usage: $0 --account <account_id>\n";
+die "Missing --account parameter\n" unless $account_id;
 
-# Ensure data directory exists
-unless (-d $data_dir) {
-    make_path($data_dir) or die "Cannot create data directory $data_dir: $!\n";
+# Plugin data directory (account-scoped)
+my $data_dir = "REPLACELBPDATADIR";
+my $account_dir = "$data_dir/accounts/$account_id";
+my $config_file = "$account_dir/config.json";
+
+# Ensure account directory exists
+unless (-d $account_dir) {
+    make_path($account_dir) or die "Cannot create account directory $account_dir: $!\n";
 }
 
 # Load configuration
@@ -43,7 +52,7 @@ my $CLIENT_ID = $config->{client_id};
 
 # Initialize logging
 my $log = LoxBerry::Log->new(
-    name => 'oauth-init',
+    name => "oauth-init-$account_id",
     stderr => 1,  # Redirect STDERR to log
     addtime => 1  # Add timestamps to log entries
 );
@@ -58,7 +67,7 @@ LOGOK("Code verifier generated");
 LOGOK("Code challenge generated (SHA256)");
 
 # Save code_verifier for later use
-my $pkce_file = "$data_dir/pkce.json";
+my $pkce_file = "$account_dir/pkce.json";
 save_json($pkce_file, { code_verifier => $code_verifier });
 LOGOK("PKCE data saved to $pkce_file");
 
@@ -83,7 +92,7 @@ LOGDEB("Expires in:         $device_response->{expires_in} seconds");
 LOGDEB("Polling interval:   $device_response->{interval} seconds");
 
 # Save device response for token polling
-my $device_file = "$data_dir/device_code.json";
+my $device_file = "$account_dir/device_code.json";
 save_json($device_file, $device_response);
 LOGOK("Device code data saved to $device_file");
 

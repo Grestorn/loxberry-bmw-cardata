@@ -54,29 +54,55 @@ cp -p -v -r $PTEMPPATH/upgrade/logs/* $PLOGS
 echo "<INFO> Remove temporary folders"
 rm -r $PTEMPPATH/upgrade
 
-# Restart bridge if it was running before upgrade
-echo "<INFO> BMW CarData: Checking if bridge should be restarted..."
+# --- Migration: single-account (flat) -> multi-account layout ---
+# Detect flat format: tokens.json or config.json directly in data root (not in accounts/)
+# Note: postinstall.sh may have already created an empty accounts/ directory,
+# so we check for root-level files regardless of whether accounts/ exists.
+if [ -f "$PDATA/tokens.json" ] || [ -f "$PDATA/config.json" ]; then
+    echo "<INFO> BMW CarData: Migrating from single-account to multi-account layout..."
+    mkdir -p "$PDATA/accounts/default"
 
-if [ -f "$PDATA/_bridge_was_running" ]; then
-    echo "<INFO> BMW CarData: Bridge was running before upgrade, restarting..."
-
-    # Start bridge via bridge-control.sh
-    if [ -x "$PBIN/bridge-control.sh" ]; then
-        "$PBIN/bridge-control.sh" start
-        if [ $? -eq 0 ]; then
-            echo "<OK> BMW CarData: Bridge restarted successfully"
-        else
-            echo "<WARNING> BMW CarData: Failed to restart bridge"
+    # Move per-account files to accounts/default/
+    for FILE in config.json tokens.json device_code.json pkce.json; do
+        if [ -f "$PDATA/$FILE" ]; then
+            mv "$PDATA/$FILE" "$PDATA/accounts/default/$FILE"
+            echo "<INFO> BMW CarData: Moved $FILE -> accounts/default/$FILE"
         fi
-    else
-        echo "<WARNING> BMW CarData: bridge-control.sh not found or not executable"
+    done
+
+    # Move bridge state file too
+    if [ -f "$PDATA/_bridge_was_running" ]; then
+        mv "$PDATA/_bridge_was_running" "$PDATA/accounts/default/_bridge_was_running"
     fi
 
-    # Remove state file
-    rm -f "$PDATA/_bridge_was_running"
-else
-    echo "<INFO> BMW CarData: Bridge was not running before upgrade, not starting"
+    echo "<OK> BMW CarData: Migration to multi-account layout complete"
 fi
+
+# Ensure accounts directory exists
+mkdir -p "$PDATA/accounts"
+
+# Restart bridges that were running before upgrade
+echo "<INFO> BMW CarData: Checking which bridges should be restarted..."
+
+for ACCT_DIR in "$PDATA"/accounts/*/; do
+    if [ -d "$ACCT_DIR" ] && [ -f "$ACCT_DIR/_bridge_was_running" ]; then
+        ACCT_ID=$(basename "$ACCT_DIR")
+        echo "<INFO> BMW CarData: Bridge [$ACCT_ID] was running before upgrade, restarting..."
+
+        if [ -x "$PBIN/bridge-control.sh" ]; then
+            "$PBIN/bridge-control.sh" --account "$ACCT_ID" start
+            if [ $? -eq 0 ]; then
+                echo "<OK> BMW CarData: Bridge [$ACCT_ID] restarted successfully"
+            else
+                echo "<WARNING> BMW CarData: Failed to restart bridge [$ACCT_ID]"
+            fi
+        else
+            echo "<WARNING> BMW CarData: bridge-control.sh not found or not executable"
+        fi
+
+        rm -f "$ACCT_DIR/_bridge_was_running"
+    fi
+done
 
 echo "<OK> BMW CarData: Post-upgrade completed"
 

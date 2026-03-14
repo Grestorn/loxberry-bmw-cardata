@@ -22,31 +22,29 @@ PBIN=$LBPBIN/$PDIR
 # BMW CarData Plugin Uninstallation
 echo "BMW CarData: Starting uninstallation..."
 
-# Stop the MQTT bridge daemon if running
-echo "BMW CarData: Stopping MQTT bridge daemon..."
-if [ -f "$PDATA/bridge.pid" ]; then
-    PID=$(cat "$PDATA/bridge.pid")
-    if ps -p "$PID" > /dev/null 2>&1; then
-        echo "BMW CarData: Stopping daemon (PID $PID)..."
-        kill -TERM "$PID"
-
-        # Wait for graceful shutdown
-        COUNTER=0
-        while ps -p "$PID" > /dev/null 2>&1 && [ $COUNTER -lt 10 ]; do
-            sleep 1
-            COUNTER=$((COUNTER + 1))
-        done
-
-        # Force kill if still running
+# Stop all MQTT bridge daemons (multi-account)
+echo "BMW CarData: Stopping all bridge daemons..."
+for ACCT_DIR in "$PDATA"/accounts/*/; do
+    if [ -d "$ACCT_DIR" ] && [ -f "$ACCT_DIR/bridge.pid" ]; then
+        ACCT_ID=$(basename "$ACCT_DIR")
+        PID=$(cat "$ACCT_DIR/bridge.pid")
         if ps -p "$PID" > /dev/null 2>&1; then
-            echo "BMW CarData: Force stopping daemon..."
-            kill -KILL "$PID"
+            echo "BMW CarData: Stopping bridge [$ACCT_ID] (PID $PID)..."
+            kill -TERM "$PID"
+            COUNTER=0
+            while ps -p "$PID" > /dev/null 2>&1 && [ $COUNTER -lt 10 ]; do
+                sleep 1
+                COUNTER=$((COUNTER + 1))
+            done
+            if ps -p "$PID" > /dev/null 2>&1; then
+                echo "BMW CarData: Force stopping bridge [$ACCT_ID]..."
+                kill -KILL "$PID"
+            fi
+            echo "BMW CarData: Bridge [$ACCT_ID] stopped"
         fi
-
-        echo "BMW CarData: Daemon stopped"
+        rm -f "$ACCT_DIR/bridge.pid"
     fi
-    rm -f "$PDATA/bridge.pid"
-fi
+done
 
 # Note: All plugin directories (PDATA, PBIN, PCONFIG, etc.) are automatically
 # deleted by LoxBerry after this script completes. No manual cleanup needed.

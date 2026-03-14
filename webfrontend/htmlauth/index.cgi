@@ -2,6 +2,7 @@
 
 # BMW CarData Plugin Web Interface
 # Handles OAuth authentication, configuration, and status display
+# Supports multiple BMW accounts (multi-tenant)
 
 use strict;
 use warnings;
@@ -12,6 +13,7 @@ use LoxBerry::JSON;
 use LoxBerry::Log;
 use JSON;
 use File::Basename;
+use File::Path qw(make_path rmtree);
 
 # CGI and Template
 my $cgi = CGI->new;
@@ -35,49 +37,97 @@ my $helptemplate = "help.html";
 my $page = $cgi->param('page') || 'main';
 my $action = $cgi->param('action') || '';
 
-# Navigation
-our %navbar;
-$navbar{10}{Name} = $L{'NAVIGATION.MAIN'};
-$navbar{10}{URL} = 'index.cgi';
-$navbar{10}{active} = 1 if $page eq 'main';
-$navbar{20}{Name} = $L{'NAVIGATION.LOGS'};
-$navbar{20}{URL} = 'index.cgi?page=logs';
-$navbar{20}{active} = 1 if $page eq 'logs';
-
-# File paths
+# Base directories
 my $data_dir = "$lbpdatadir";
 my $bin_dir = "$lbpbindir";
-my $tokens_file = "$data_dir/tokens.json";
-my $config_file = "$data_dir/config.json";
+my $accounts_base = "$data_dir/accounts";
 
-# Handle form submissions
-
-if ($action eq 'save_config') {
-    handle_save_config();
-} elsif ($action eq 'request_device_code') {
-    handle_request_device_code();
-} elsif ($action eq 'check_oauth') {
-    handle_check_oauth();
-} elsif ($action eq 'refresh_token') {
-    handle_refresh_token();
-} elsif ($action eq 'reset_auth') {
-    handle_reset_auth();
-} elsif ($action eq 'start_bridge') {
-    handle_start_bridge();
-} elsif ($action eq 'stop_bridge') {
-    handle_stop_bridge();
-} elsif ($action eq 'restart_bridge') {
-    handle_restart_bridge();
+# Ensure accounts directory exists
+unless (-d $accounts_base) {
+    make_path($accounts_base);
 }
 
-# Load current status (create default config if not exists)
-my $tokens = load_tokens();
-my $config = load_or_create_config();
-my $bridge_status = get_bridge_status();
-my $device_code_data = load_device_code();
+# Account handling
+my $account_id = $cgi->param('account') || '';
+my @accounts = list_accounts();
+
+# Handle account creation first (before account_id validation)
+if ($action eq 'create_account') {
+    handle_create_account();
+    # Reload account list after creation
+    @accounts = list_accounts();
+}
+
+# Handle account deletion
+if ($action eq 'delete_account' && $account_id) {
+    handle_delete_account();
+    @accounts = list_accounts();
+    $account_id = '';  # Reset after deletion
+}
+
+# If no account selected but accounts exist, use the first one
+if (!$account_id && @accounts > 0) {
+    $account_id = $accounts[0]->{id};
+}
+
+# Account-scoped paths (only set if we have an account)
+my $account_dir = '';
+my $tokens_file = '';
+my $config_file = '';
+
+if ($account_id) {
+    $account_dir = "$accounts_base/$account_id";
+    $tokens_file = "$account_dir/tokens.json";
+    $config_file = "$account_dir/config.json";
+}
+
+# Navigation (include account in URLs if selected)
+our %navbar;
+my $account_param = $account_id ? "&account=$account_id" : '';
+$navbar{10}{Name} = $L{'NAVIGATION.MAIN'};
+$navbar{10}{URL} = "index.cgi?page=main$account_param";
+$navbar{10}{active} = 1 if $page eq 'main';
+$navbar{20}{Name} = $L{'NAVIGATION.LOGS'};
+$navbar{20}{URL} = "index.cgi?page=logs$account_param";
+$navbar{20}{active} = 1 if $page eq 'logs';
+
+# Handle form submissions (only if account is selected)
+if ($account_id && -d $account_dir) {
+    if ($action eq 'save_config') {
+        handle_save_config();
+    } elsif ($action eq 'request_device_code') {
+        handle_request_device_code();
+    } elsif ($action eq 'check_oauth') {
+        handle_check_oauth();
+    } elsif ($action eq 'refresh_token') {
+        handle_refresh_token();
+    } elsif ($action eq 'reset_auth') {
+        handle_reset_auth();
+    } elsif ($action eq 'start_bridge') {
+        handle_start_bridge();
+    } elsif ($action eq 'stop_bridge') {
+        handle_stop_bridge();
+    } elsif ($action eq 'restart_bridge') {
+        handle_restart_bridge();
+    }
+}
+
+# Load current status (only if account selected)
+my $tokens;
+my $config;
+my $bridge_status = { running => 0, pid => undef };
+my $device_code_data;
+
+if ($account_id && -d $account_dir) {
+    $tokens = load_tokens();
+    $config = load_or_create_config();
+    $bridge_status = get_bridge_status();
+    $device_code_data = load_device_code();
+}
 
 # Prepare template variables
-prepare_template_vars($page, $tokens, $config, $bridge_status, $device_code_data);
+prepare_account_vars();
+prepare_template_vars($page, $tokens, $config, $bridge_status, $device_code_data) if $account_id;
 
 # Output
 LoxBerry::Web::lbheader($plugintitle, $helplink, $helptemplate);
@@ -85,6 +135,133 @@ print $template->output();
 LoxBerry::Web::lbfooter();
 
 exit;
+
+#
+# Account Management
+#
+
+sub list_accounts {
+    my @result;
+    return @result unless -d $accounts_base;
+
+    opendir(my $dh, $accounts_base) or return @result;
+    my @dirs = sort grep { -d "$accounts_base/$_" && $_ !~ /^\./ } readdir($dh);
+    closedir($dh);
+
+    foreach my $dir (@dirs) {
+        my $acct = { id => $dir, name => $dir };
+        # Try to read account_name from config
+        my $cfg_file = "$accounts_base/$dir/config.json";
+        if (-f $cfg_file) {
+            my $cfg = eval { load_json($cfg_file) };
+            if ($cfg && $cfg->{account_name}) {
+                $acct->{name} = $cfg->{account_name};
+            }
+        }
+        push @result, $acct;
+    }
+
+    return @result;
+}
+
+sub generate_slug {
+    my ($name) = @_;
+    my $slug = lc($name);
+    # Replace non-alphanumeric with hyphens
+    $slug =~ s/[^a-z0-9]+/-/g;
+    # Remove leading/trailing hyphens
+    $slug =~ s/^-+|-+$//g;
+    # Limit length
+    $slug = substr($slug, 0, 32);
+    $slug = 'account' if $slug eq '';
+
+    # Ensure uniqueness
+    my $base_slug = $slug;
+    my $counter = 2;
+    while (-d "$accounts_base/$slug") {
+        $slug = "$base_slug-$counter";
+        $counter++;
+    }
+
+    return $slug;
+}
+
+sub handle_create_account {
+    my $account_name = $cgi->param('account_name') || '';
+    $account_name =~ s/^\s+|\s+$//g;
+
+    unless ($account_name) {
+        $template->param('ACCOUNT_CREATE_ERROR' => 1);
+        return;
+    }
+
+    my $slug = generate_slug($account_name);
+    my $new_dir = "$accounts_base/$slug";
+    make_path($new_dir);
+
+    # Create default config with account name
+    my $default_config = {
+        account_name => $account_name,
+        client_id => '',
+        stream_host => 'customer.streaming-cardata.bmwgroup.com',
+        stream_port => 9000,
+        stream_username => '',
+        vins => [],
+        mqtt_topic_prefix => "bmw-$slug",
+    };
+
+    my $cfg_file = "$new_dir/config.json";
+    open(my $fh, '>', $cfg_file) or die "Cannot write config: $!";
+    print $fh JSON->new->pretty->encode($default_config);
+    close($fh);
+    chmod(0600, $cfg_file);
+
+    # Select the new account
+    $account_id = $slug;
+    $account_dir = $new_dir;
+    $tokens_file = "$account_dir/tokens.json";
+    $config_file = "$account_dir/config.json";
+
+    $template->param('ACCOUNT_CREATED' => 1);
+    $template->param('ACCOUNT_CREATED_NAME' => $account_name);
+}
+
+sub handle_delete_account {
+    return unless $account_id && -d "$accounts_base/$account_id";
+
+    # Stop the bridge if running
+    system("$bin_dir/bridge-control.sh --account $account_id stop >/dev/null 2>&1");
+
+    # Remove account directory
+    rmtree("$accounts_base/$account_id");
+
+    $template->param('ACCOUNT_DELETED' => 1);
+}
+
+sub prepare_account_vars {
+    # Build accounts loop for template
+    my @accounts_loop;
+    foreach my $acct (@accounts) {
+        push @accounts_loop, {
+            ACCOUNT_ID => $acct->{id},
+            ACCOUNT_NAME => $acct->{name},
+            ACCOUNT_ACTIVE => ($account_id eq $acct->{id}) ? 1 : 0,
+        };
+    }
+    $template->param('ACCOUNTS_LOOP' => \@accounts_loop);
+    $template->param('HAS_ACCOUNTS' => scalar @accounts > 0);
+    $template->param('NO_ACCOUNTS' => scalar @accounts == 0);
+    $template->param('CURRENT_ACCOUNT_ID' => $account_id);
+    $template->param('CURRENT_ACCOUNT_NAME' => '');
+
+    # Set current account name
+    foreach my $acct (@accounts) {
+        if ($acct->{id} eq $account_id) {
+            $template->param('CURRENT_ACCOUNT_NAME' => $acct->{name});
+            last;
+        }
+    }
+}
 
 #
 # Action Handlers
@@ -95,7 +272,11 @@ sub handle_save_config {
     my $old_config = load_config();
     my $old_client_id = $old_config ? ($old_config->{client_id} || '') : '';
 
+    # Preserve account_name from old config or use account_id
+    my $account_name = $old_config ? ($old_config->{account_name} || $account_id) : $account_id;
+
     my $new_config = {
+        account_name => $account_name,
         client_id => $cgi->param('client_id') || '',
         stream_host => $cgi->param('stream_host') || '',
         stream_port => int($cgi->param('stream_port') || 0),
@@ -130,13 +311,13 @@ sub handle_save_config {
 }
 
 sub handle_request_device_code {
-    # Run oauth-init.pl
-    system("$bin_dir/oauth-init.pl >/dev/null 2>&1");
+    # Run oauth-init.pl with account parameter
+    system("$bin_dir/oauth-init.pl --account $account_id >/dev/null 2>&1");
     my $exit_code = $? >> 8;
 
     if ($exit_code == 0) {
         # Load device code response to extract verification URI
-        my $device_file = "$data_dir/device_code.json";
+        my $device_file = "$account_dir/device_code.json";
         if (-f $device_file) {
             my $device_data = eval { load_json($device_file) };
             if ($device_data) {
@@ -157,13 +338,13 @@ sub handle_request_device_code {
 }
 
 sub handle_check_oauth {
-    # Run oauth-poll.pl
-    system("$bin_dir/oauth-poll.pl >/dev/null 2>&1");
+    # Run oauth-poll.pl with account parameter
+    system("$bin_dir/oauth-poll.pl --account $account_id >/dev/null 2>&1");
     my $exit_code = $? >> 8;
 
     # Generate log button to view results
     my $log_button = LoxBerry::Web::logfile_button_html(
-        NAME => 'oauth-poll',
+        NAME => "oauth-poll-$account_id",
         PACKAGE => $lbpplugindir
     );
 
@@ -174,7 +355,7 @@ sub handle_check_oauth {
         # Auto-start bridge after successful registration
         my $bridge_status = get_bridge_status();
         unless ($bridge_status->{running}) {
-            system("$bin_dir/bridge-control.sh start >/dev/null 2>&1");
+            system("$bin_dir/bridge-control.sh --account $account_id start >/dev/null 2>&1");
         }
     } else {
         $template->param('OAUTH_POLL_ERROR' => 1);
@@ -183,7 +364,7 @@ sub handle_check_oauth {
 }
 
 sub handle_start_bridge {
-    system("$bin_dir/bridge-control.sh start >/dev/null 2>&1");
+    system("$bin_dir/bridge-control.sh --account $account_id start >/dev/null 2>&1");
     my $exit_code = $? >> 8;
 
     if ($exit_code != 0) {
@@ -192,7 +373,7 @@ sub handle_start_bridge {
 }
 
 sub handle_stop_bridge {
-    system("$bin_dir/bridge-control.sh stop >/dev/null 2>&1");
+    system("$bin_dir/bridge-control.sh --account $account_id stop >/dev/null 2>&1");
     my $exit_code = $? >> 8;
 
     if ($exit_code != 0) {
@@ -201,7 +382,7 @@ sub handle_stop_bridge {
 }
 
 sub handle_restart_bridge {
-    system("$bin_dir/bridge-control.sh restart >/dev/null 2>&1");
+    system("$bin_dir/bridge-control.sh --account $account_id restart >/dev/null 2>&1");
     my $exit_code = $? >> 8;
 
     if ($exit_code != 0) {
@@ -210,13 +391,13 @@ sub handle_restart_bridge {
 }
 
 sub handle_refresh_token {
-    # Run token-manager.pl refresh --force
-    system("$bin_dir/token-manager.pl refresh --force >/dev/null 2>&1");
+    # Run token-manager.pl refresh --force with account parameter
+    system("$bin_dir/token-manager.pl --account $account_id refresh --force >/dev/null 2>&1");
     my $exit_code = $? >> 8;
 
     # Generate log button to view results
     my $log_button = LoxBerry::Web::logfile_button_html(
-        NAME => 'token-manager',
+        NAME => "token-manager-$account_id",
         PACKAGE => $lbpplugindir
     );
 
@@ -242,12 +423,12 @@ sub handle_reset_auth {
 
 sub reset_authentication_files {
     # Stop the bridge if running
-    system("$bin_dir/bridge-control.sh stop >/dev/null 2>&1");
+    system("$bin_dir/bridge-control.sh --account $account_id stop >/dev/null 2>&1");
 
     # Remove authentication files
     unlink($tokens_file) if -f $tokens_file;
-    unlink("$data_dir/device_code.json") if -f "$data_dir/device_code.json";
-    unlink("$data_dir/pkce.json") if -f "$data_dir/pkce.json";
+    unlink("$account_dir/device_code.json") if -f "$account_dir/device_code.json";
+    unlink("$account_dir/pkce.json") if -f "$account_dir/pkce.json";
 }
 
 #
@@ -435,18 +616,18 @@ sub load_or_create_config {
 
     # Create default config if not exists
     my $default_config = {
+        account_name => $account_id,
         client_id => '',
         stream_host => 'customer.streaming-cardata.bmwgroup.com',
         stream_port => 9000,
         stream_username => '',
         vins => [],
-        mqtt_topic_prefix => 'bmw',
+        mqtt_topic_prefix => "bmw-$account_id",
     };
 
-    # Ensure data directory exists
-    unless (-d $data_dir) {
-        require File::Path;
-        File::Path::make_path($data_dir);
+    # Ensure account directory exists
+    unless (-d $account_dir) {
+        make_path($account_dir);
     }
 
     # Save default config
@@ -482,7 +663,7 @@ sub save_config {
 }
 
 sub get_bridge_status {
-    my $pid_file = "$data_dir/bridge.pid";
+    my $pid_file = "$account_dir/bridge.pid";
     my $status = {
         running => 0,
         pid => undef,
@@ -506,7 +687,7 @@ sub get_bridge_status {
 }
 
 sub load_device_code {
-    my $device_file = "$data_dir/device_code.json";
+    my $device_file = "$account_dir/device_code.json";
     return undef unless -f $device_file;
 
     my $json_text;

@@ -1,17 +1,58 @@
 #!/bin/bash
 #
 # BMW CarData Bridge Control Script
-# Controls the bmw-cardata-bridge daemon
+# Controls the bmw-cardata-bridge daemon (per-account)
 #
 
 SCRIPT_DIR="REPLACELBPBINDIR"
 DATA_DIR="REPLACELBPDATADIR"
+LOG_DIR="REPLACELBPLOGDIR"
 DAEMON="$SCRIPT_DIR/bmw-cardata-bridge.pl"
-PID_FILE="$DATA_DIR/bridge.pid"
-LOG_FILE="REPLACELBPLOGDIR/bridge.log"
 
 # Ensure log directory exists
-mkdir -p "$(dirname "$LOG_FILE")"
+mkdir -p "$LOG_DIR"
+
+# Parse --account parameter
+ACCOUNT_ID=""
+COMMAND=""
+for arg in "$@"; do
+    case "$arg" in
+        --account=*)
+            ACCOUNT_ID="${arg#*=}"
+            ;;
+        --account)
+            # Next argument will be the account ID
+            NEXT_IS_ACCOUNT=1
+            ;;
+        *)
+            if [ "$NEXT_IS_ACCOUNT" = "1" ]; then
+                ACCOUNT_ID="$arg"
+                NEXT_IS_ACCOUNT=""
+            else
+                COMMAND="$arg"
+            fi
+            ;;
+    esac
+done
+
+# For start-all / stop-all, no account needed
+case "$COMMAND" in
+    start-all|stop-all)
+        # These commands iterate over all accounts
+        ;;
+    *)
+        if [ -z "$ACCOUNT_ID" ] && [ "$COMMAND" != "" ]; then
+            echo "Usage: $0 --account <account_id> {start|stop|restart|reload|status|logs}"
+            echo "       $0 {start-all|stop-all}"
+            exit 1
+        fi
+        ;;
+esac
+
+# Account-specific paths
+ACCOUNT_DIR="$DATA_DIR/accounts/$ACCOUNT_ID"
+PID_FILE="$ACCOUNT_DIR/bridge.pid"
+LOG_FILE="$LOG_DIR/bridge-${ACCOUNT_ID}.log"
 
 # Functions
 get_pid() {
@@ -36,32 +77,32 @@ is_running() {
 
 start() {
     if is_running; then
-        echo "Bridge is already running (PID $(get_pid))"
+        echo "Bridge [$ACCOUNT_ID] is already running (PID $(get_pid))"
         return 1
     fi
 
-    echo "Starting BMW CarData Bridge..."
-    perl "$DAEMON" --daemon
+    echo "Starting BMW CarData Bridge [$ACCOUNT_ID]..."
+    perl "$DAEMON" --account "$ACCOUNT_ID" --daemon
 
     # Wait a moment and check if started
     sleep 2
     if is_running; then
-        echo "Bridge started successfully (PID $(get_pid))"
+        echo "Bridge [$ACCOUNT_ID] started successfully (PID $(get_pid))"
         return 0
     else
-        echo "Failed to start bridge. Check log: $LOG_FILE"
+        echo "Failed to start bridge [$ACCOUNT_ID]. Check log: $LOG_FILE"
         return 1
     fi
 }
 
 stop() {
     if ! is_running; then
-        echo "Bridge is not running"
+        echo "Bridge [$ACCOUNT_ID] is not running"
         return 0
     fi
 
     local pid=$(get_pid)
-    echo "Stopping BMW CarData Bridge (PID $pid)..."
+    echo "Stopping BMW CarData Bridge [$ACCOUNT_ID] (PID $pid)..."
 
     kill -TERM "$pid"
 
@@ -73,18 +114,18 @@ stop() {
     done
 
     if is_running; then
-        echo "Bridge did not stop gracefully, forcing..."
+        echo "Bridge [$ACCOUNT_ID] did not stop gracefully, forcing..."
         kill -KILL "$pid"
         sleep 1
     fi
 
     rm -f "$PID_FILE"
-    echo "Bridge stopped"
+    echo "Bridge [$ACCOUNT_ID] stopped"
     return 0
 }
 
 restart() {
-    echo "Restarting BMW CarData Bridge..."
+    echo "Restarting BMW CarData Bridge [$ACCOUNT_ID]..."
     stop
     sleep 2
     start
@@ -92,12 +133,12 @@ restart() {
 
 reload() {
     if ! is_running; then
-        echo "Bridge is not running, cannot reload"
+        echo "Bridge [$ACCOUNT_ID] is not running, cannot reload"
         return 1
     fi
 
     local pid=$(get_pid)
-    echo "Reloading configuration (PID $pid)..."
+    echo "Reloading configuration [$ACCOUNT_ID] (PID $pid)..."
     kill -HUP "$pid"
     echo "Configuration reload signal sent"
     return 0
@@ -106,7 +147,7 @@ reload() {
 status() {
     if is_running; then
         local pid=$(get_pid)
-        echo "BMW CarData Bridge is running (PID $pid)"
+        echo "BMW CarData Bridge [$ACCOUNT_ID] is running (PID $pid)"
 
         # Show last log lines
         if [ -f "$LOG_FILE" ]; then
@@ -116,7 +157,7 @@ status() {
         fi
         return 0
     else
-        echo "BMW CarData Bridge is not running"
+        echo "BMW CarData Bridge [$ACCOUNT_ID] is not running"
         return 1
     fi
 }
@@ -130,8 +171,44 @@ logs() {
     fi
 }
 
+start_all() {
+    echo "Starting all BMW CarData bridges..."
+    local started=0
+    for ACCT_DIR in "$DATA_DIR"/accounts/*/; do
+        if [ -d "$ACCT_DIR" ] && [ -f "$ACCT_DIR/tokens.json" ] && [ -f "$ACCT_DIR/config.json" ]; then
+            local acct=$(basename "$ACCT_DIR")
+            ACCOUNT_ID="$acct"
+            ACCOUNT_DIR="$ACCT_DIR"
+            PID_FILE="$ACCOUNT_DIR/bridge.pid"
+            LOG_FILE="$LOG_DIR/bridge-${acct}.log"
+            start
+            started=$((started + 1))
+        fi
+    done
+    echo "Started $started bridge(s)"
+}
+
+stop_all() {
+    echo "Stopping all BMW CarData bridges..."
+    local stopped=0
+    for ACCT_DIR in "$DATA_DIR"/accounts/*/; do
+        if [ -d "$ACCT_DIR" ]; then
+            local acct=$(basename "$ACCT_DIR")
+            ACCOUNT_ID="$acct"
+            ACCOUNT_DIR="$ACCT_DIR"
+            PID_FILE="$ACCOUNT_DIR/bridge.pid"
+            LOG_FILE="$LOG_DIR/bridge-${acct}.log"
+            if is_running; then
+                stop
+                stopped=$((stopped + 1))
+            fi
+        fi
+    done
+    echo "Stopped $stopped bridge(s)"
+}
+
 # Main
-case "$1" in
+case "$COMMAND" in
     start)
         start
         ;;
@@ -150,16 +227,27 @@ case "$1" in
     logs)
         logs
         ;;
+    start-all)
+        start_all
+        ;;
+    stop-all)
+        stop_all
+        ;;
     *)
-        echo "Usage: $0 {start|stop|restart|reload|status|logs}"
+        echo "Usage: $0 --account <account_id> {start|stop|restart|reload|status|logs}"
+        echo "       $0 {start-all|stop-all}"
         echo ""
-        echo "Commands:"
-        echo "  start   - Start the bridge daemon"
-        echo "  stop    - Stop the bridge daemon"
-        echo "  restart - Restart the bridge daemon"
+        echo "Per-account commands:"
+        echo "  start   - Start the bridge daemon for an account"
+        echo "  stop    - Stop the bridge daemon for an account"
+        echo "  restart - Restart the bridge daemon for an account"
         echo "  reload  - Reload configuration without restart"
         echo "  status  - Show bridge status and recent logs"
         echo "  logs    - Follow bridge logs (Ctrl+C to stop)"
+        echo ""
+        echo "Global commands:"
+        echo "  start-all - Start bridges for all configured accounts"
+        echo "  stop-all  - Stop all running bridges"
         exit 1
         ;;
 esac

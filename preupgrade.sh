@@ -46,45 +46,52 @@ PCONFIG=$LBPCONFIG/$PDIR
 PSBIN=$LBPSBIN/$PDIR
 PBIN=$LBPBIN/$PDIR
 
-# Stop BMW CarData bridge if running and save state BEFORE backup
-echo "<INFO> BMW CarData: Checking if bridge is running..."
+# Stop all BMW CarData bridge daemons and save state BEFORE backup
+echo "<INFO> BMW CarData: Stopping all bridge daemons..."
 
-BRIDGE_WAS_RUNNING=0
+# Stop bridges for multi-account layout (accounts/*/bridge.pid)
+for ACCT_DIR in "$PDATA"/accounts/*/; do
+    if [ -d "$ACCT_DIR" ] && [ -f "$ACCT_DIR/bridge.pid" ]; then
+        ACCT_ID=$(basename "$ACCT_DIR")
+        PID=$(cat "$ACCT_DIR/bridge.pid")
+        if ps -p "$PID" > /dev/null 2>&1; then
+            echo "<INFO> BMW CarData: Stopping bridge [$ACCT_ID] (PID $PID)..."
+            echo "1" > "$ACCT_DIR/_bridge_was_running"
+            kill -TERM "$PID"
+            COUNTER=0
+            while ps -p "$PID" > /dev/null 2>&1 && [ $COUNTER -lt 10 ]; do
+                sleep 1
+                COUNTER=$((COUNTER + 1))
+            done
+            if ps -p "$PID" > /dev/null 2>&1; then
+                echo "<WARNING> BMW CarData: Force stopping bridge [$ACCT_ID]..."
+                kill -KILL "$PID"
+            fi
+            echo "<OK> BMW CarData: Bridge [$ACCT_ID] stopped"
+        fi
+        rm -f "$ACCT_DIR/bridge.pid"
+    fi
+done
+
+# Also handle legacy single-account layout (bridge.pid in data root)
 if [ -f "$PDATA/bridge.pid" ]; then
     PID=$(cat "$PDATA/bridge.pid")
     if ps -p "$PID" > /dev/null 2>&1; then
-        echo "<INFO> BMW CarData: Bridge is currently running (PID $PID)"
-        BRIDGE_WAS_RUNNING=1
-
-        # Save state for postupgrade BEFORE backup
+        echo "<INFO> BMW CarData: Stopping legacy bridge (PID $PID)..."
         echo "1" > "$PDATA/_bridge_was_running"
-
-        # Stop the bridge
-        echo "<INFO> BMW CarData: Stopping MQTT bridge daemon..."
         kill -TERM "$PID"
-
-        # Wait for graceful shutdown
         COUNTER=0
         while ps -p "$PID" > /dev/null 2>&1 && [ $COUNTER -lt 10 ]; do
             sleep 1
             COUNTER=$((COUNTER + 1))
         done
-
-        # Force kill if still running
         if ps -p "$PID" > /dev/null 2>&1; then
-            echo "<WARNING> BMW CarData: Force stopping daemon..."
+            echo "<WARNING> BMW CarData: Force stopping legacy bridge..."
             kill -KILL "$PID"
         fi
-
-        echo "<OK> BMW CarData: Daemon stopped"
-    else
-        echo "<INFO> BMW CarData: Bridge PID file exists but process not running"
+        echo "<OK> BMW CarData: Legacy bridge stopped"
     fi
     rm -f "$PDATA/bridge.pid"
-else
-    echo "<INFO> BMW CarData: Bridge is not running"
-    # Make sure state file doesn't exist
-    rm -f "$PDATA/_bridge_was_running"
 fi
 
 echo "<INFO> Creating temporary folders for upgrading"
